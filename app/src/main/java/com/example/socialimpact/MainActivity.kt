@@ -4,37 +4,79 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.example.socialimpact.ui.screens.SplashLayout
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.socialimpact.ui.layouts.SigninLayout
+import com.example.socialimpact.ui.layouts.SignupLayout
+import com.example.socialimpact.ui.layouts.SplashLayout
 import com.example.socialimpact.ui.theme.SocialimpactTheme
 
-/**
- * The main entry point of the Social Impact application.
- *
- * This activity sets up the edge-to-edge display and hosts the root [SplashLayout].
- * As the app grows, this class can be updated to include Jetpack Navigation for 
- * managing screen transitions.
- */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             SocialimpactTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    SplashLayout(
-                        onGetStarted = {
-                            // Handle Get Started action (e.g., navigate to registration)
-                        },
-                        onLogin = {
-                            // Handle Login action (e.g., navigate to login screen)
-                        },
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                AppNavigation()
+            }
+        }
+    }
+}
+
+@Composable
+fun AppNavigation() {
+    val navController = rememberNavController()
+
+    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = "splash",
+            modifier = Modifier.padding(innerPadding),
+            // Default "Push-In" animations for all screen transitions
+            enterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(400)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(400)
+                )
+            },
+            popEnterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(400)
+                )
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(400)
+                )
+            }
+        ) {
+            composable("splash") {
+                SplashLayout(
+                    onGetStarted = { navController.navigate("signup") },
+                    onLogin = { navController.navigate("signin") }
+                )
+            }
+            composable("signin") {
+                SigninLayout(onBack = { navController.popBackStack() })
+            }
+            composable("signup") {
+                SignupLayout(onBack = { navController.popBackStack() })
             }
         }
     }

@@ -1,4 +1,4 @@
-package com.example.socialimpact.ui.screens
+package com.example.socialimpact.ui.layouts
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
