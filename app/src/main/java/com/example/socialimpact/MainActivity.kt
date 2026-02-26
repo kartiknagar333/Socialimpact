@@ -4,13 +4,19 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.example.socialimpact.components.LightButton
+import com.example.socialimpact.components.PrimaryButton
 import com.example.socialimpact.ui.theme.SocialimpactTheme
 
 class MainActivity : ComponentActivity() {
@@ -20,10 +26,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             SocialimpactTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                    BottomButtonsLayout(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -31,17 +34,34 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
+fun BottomButtonsLayout(modifier: Modifier = Modifier) {
+    Column(
         modifier = modifier
-    )
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Bottom
+    ) {
+        PrimaryButton(
+            text = "Get Started !",
+            onClick = { /* TODO */ }
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+
+        LightButton(
+            text = "Have an account ? Login Now",
+            onClick = { /* TODO */ }
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+    }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
-fun GreetingPreview() {
+private fun GreetingPreview() {
     SocialimpactTheme {
-        Greeting("Android")
+        BottomButtonsLayout()
     }
 }
