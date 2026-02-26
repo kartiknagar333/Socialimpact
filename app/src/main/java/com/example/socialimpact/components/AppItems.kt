@@ -1,5 +1,6 @@
 package com.example.socialimpact.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.BlendMode
@@ -36,6 +38,11 @@ fun AppItem(
     icon: ImageVector,
     modifier: Modifier = Modifier
 ) {
+    val gradientColors = listOf(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.background
+    )
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -60,13 +67,13 @@ fun AppItem(
                             drawContent()
                             drawRect(
                                 Brush.linearGradient(
-                                    colors = listOf(Color(0xFF000000),tint)
+                                    gradientColors
                                 ),
                                 blendMode = BlendMode.SrcAtop
                             )
                         }
                     },
-                tint = Color.Unspecified // Disable default tint to show gradient
+                tint = Color.Unspecified
             )
         }
 
@@ -78,16 +85,16 @@ fun AppItem(
         ) {
             Text(
                 text = title,
-                fontSize = 18.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onBackground // Using blackwhite from your Color.kt
             )
             Text(
                 text = description,
-                fontSize = 14.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color.Gray,
-                lineHeight = 20.sp
+                lineHeight = 15.sp
             )
         }
     }

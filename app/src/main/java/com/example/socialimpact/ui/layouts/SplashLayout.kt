@@ -1,20 +1,24 @@
 package com.example.socialimpact.ui.layouts
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoGraph
 import androidx.compose.material.icons.rounded.Diversity3
 import androidx.compose.material.icons.rounded.VolunteerActivism
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.socialimpact.R
 import com.example.socialimpact.components.AppItem
 import com.example.socialimpact.components.LightButton
 import com.example.socialimpact.components.PrimaryButton
@@ -41,29 +45,40 @@ fun SplashLayout(
             .padding(24.dp)
     ) {
         // Header Section: Centralized Branding
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 32.dp, bottom = 16.dp),
-            contentAlignment = Alignment.Center
+                .padding(top = 16.dp, bottom = 0.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Social Impact",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.Black,
-                textAlign = TextAlign.Center
-            )
+
         }
 
         // Content Section: Core Value Propositions
-        // Weight(1f) ensures this section fills the available middle space
         Column(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            Image(
+                painter = painterResource(id = R.drawable.socialimpact),
+                contentDescription = "Social Impact Logo",
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onBackground), // Added tint color here
+                modifier = Modifier
+                    .size(120.dp)
+                    .padding(bottom = 16.dp)
+            )
+            Text(
+                text = "Social Impact",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 16.dp)
+
+            )
             AppItem(
                 title = "Community Support",
                 description = "Connect with people nearby to help or get support for local initiatives.",

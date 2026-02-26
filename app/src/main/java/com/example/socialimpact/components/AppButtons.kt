@@ -5,14 +5,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.socialimpact.ui.theme.*
 
 @Composable
 fun PrimaryButton(
@@ -25,8 +24,8 @@ fun PrimaryButton(
         shape = RoundedCornerShape(20.dp),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = tint,
-            contentColor = Color.White
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
         ),
         modifier = modifier
             .fillMaxWidth()
@@ -34,7 +33,7 @@ fun PrimaryButton(
     ) {
         Text(
             text = text,
-            fontSize = 16.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
             letterSpacing = 1.25.sp
         )
@@ -52,8 +51,8 @@ fun LightButton(
         shape = RoundedCornerShape(20.dp),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color.White,
-            contentColor = tint
+            containerColor = MaterialTheme.colorScheme.secondary,
+            contentColor = MaterialTheme.colorScheme.onSecondary
         ),
         modifier = modifier
             .fillMaxWidth()
@@ -61,7 +60,7 @@ fun LightButton(
     ) {
         Text(
             text = text,
-            fontSize = 16.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
             letterSpacing = 1.25.sp
         )
