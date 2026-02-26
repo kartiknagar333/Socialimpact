@@ -1,5 +1,6 @@
 package com.example.socialimpact.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,8 +24,9 @@ fun PrimaryButton(
     Button(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor =Purple40,
+            containerColor = tint,
             contentColor = Color.White
         ),
         modifier = modifier
@@ -33,8 +35,8 @@ fun PrimaryButton(
     ) {
         Text(
             text = text,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
             letterSpacing = 1.25.sp
         )
     }
@@ -49,9 +51,10 @@ fun LightButton(
     Button(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = PurpleGrey80, // Light purple background
-            contentColor = Purple40    // Darker purple text
+            containerColor = Color.White,
+            contentColor = tint
         ),
         modifier = modifier
             .fillMaxWidth()
@@ -59,8 +62,8 @@ fun LightButton(
     ) {
         Text(
             text = text,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
             letterSpacing = 1.25.sp
         )
     }

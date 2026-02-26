@@ -4,21 +4,20 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.example.socialimpact.components.LightButton
-import com.example.socialimpact.components.PrimaryButton
+import com.example.socialimpact.ui.screens.SplashLayout
 import com.example.socialimpact.ui.theme.SocialimpactTheme
 
+/**
+ * The main entry point of the Social Impact application.
+ *
+ * This activity sets up the edge-to-edge display and hosts the root [SplashLayout].
+ * As the app grows, this class can be updated to include Jetpack Navigation for 
+ * managing screen transitions.
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,42 +25,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             SocialimpactTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    BottomButtonsLayout(modifier = Modifier.padding(innerPadding))
+                    SplashLayout(
+                        onGetStarted = {
+                            // Handle Get Started action (e.g., navigate to registration)
+                        },
+                        onLogin = {
+                            // Handle Login action (e.g., navigate to login screen)
+                        },
+                        modifier = Modifier.padding(innerPadding)
+                    )
                 }
             }
         }
-    }
-}
-
-@Composable
-fun BottomButtonsLayout(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Bottom
-    ) {
-        PrimaryButton(
-            text = "Get Started !",
-            onClick = { /* TODO */ }
-        )
-        
-        Spacer(modifier = Modifier.height(12.dp))
-
-        LightButton(
-            text = "Have an account ? Login Now",
-            onClick = { /* TODO */ }
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun GreetingPreview() {
-    SocialimpactTheme {
-        BottomButtonsLayout()
     }
 }
