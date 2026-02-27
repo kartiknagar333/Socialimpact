@@ -76,7 +76,10 @@ fun AppNavigation() {
                 SigninLayout(onBack = { navController.popBackStack() })
             }
             composable("signup") {
-                SignupLayout(onBack = { navController.popBackStack() })
+                SignupLayout(
+                    onBack = { navController.popBackStack() },
+                    onSuccess = { navController.navigate("signin") }
+                )
             }
         }
     }
