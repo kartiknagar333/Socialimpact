@@ -1,6 +1,6 @@
 package com.example.socialimpact.ui.layouts
 
-import android.util.Patterns
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,20 +16,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.socialimpact.R
 import com.example.socialimpact.components.LightButton
 import com.example.socialimpact.components.PrimaryButton
 import com.example.socialimpact.components.PrimaryTextField
 import com.example.socialimpact.ui.theme.SocialimpactTheme
 import com.example.socialimpact.ui.viewmodel.AuthViewModel
+import com.example.socialimpact.ui.viewmodel.SignupUiState
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
 
-/**
- * Sign Up Screen following Clean Architecture and modern Android practices.
- * Handles Email/Password sign up and Google authentication.
- */
 @Composable
 fun SignupLayout(
     onBack: () -> Unit,
@@ -37,25 +43,58 @@ fun SignupLayout(
     modifier: Modifier = Modifier,
     viewModel: AuthViewModel = viewModel()
 ) {
-    val authState by viewModel.authState
-    val isLoading by viewModel.isLoading
+    val uiState by viewModel.uiState
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val credentialManager = remember { CredentialManager.create(context) }
 
     // Handle Auth States
-    LaunchedEffect(authState) {
-        authState?.let { result ->
-            result.onSuccess {
-                onSuccess()
-            }
-            result.onFailure { error ->
-                Toast.makeText(context, error.message ?: "Authentication Failed", Toast.LENGTH_SHORT).show()
-            }
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            onSuccess()
+        }
+    }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearError()
         }
     }
 
     SignupContent(
-        isLoading = isLoading,
-        onSignUp = { email, password -> viewModel.signUp(email, password) },
+        uiState = uiState,
+        onEmailChange = viewModel::onEmailChange,
+        onPasswordChange = viewModel::onPasswordChange,
+        onConfirmPasswordChange = viewModel::onConfirmPasswordChange,
+        onSignUp = viewModel::signUp,
+        onGoogleSignIn = {
+            val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
+                .setFilterByAuthorizedAccounts(false)
+                .setServerClientId(context.getString(R.string.default_web_client_id))
+                .build()
+
+            val request: GetCredentialRequest = GetCredentialRequest.Builder()
+                .addCredentialOption(googleIdOption)
+                .build()
+
+            coroutineScope.launch {
+                try {
+                    val result = credentialManager.getCredential(
+                        request = request,
+                        context = context
+                    )
+                    val credential = result.credential
+                    if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                        viewModel.signInWithGoogle(googleIdTokenCredential.idToken)
+                    }
+                } catch (e: GetCredentialException) {
+                    Log.e("Auth", "Credential Manager Error: ${e.message}")
+                    Toast.makeText(context, "Google Sign-In failed", Toast.LENGTH_SHORT).show()
+                }
+            }
+        },
         onBack = onBack,
         modifier = modifier
     )
@@ -63,67 +102,15 @@ fun SignupLayout(
 
 @Composable
 fun SignupContent(
-    isLoading: Boolean,
-    onSignUp: (String, String) -> Unit,
+    uiState: SignupUiState,
+    onEmailChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onConfirmPasswordChange: (String) -> Unit,
+    onSignUp: () -> Unit,
+    onGoogleSignIn: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    
-    var emailError by remember { mutableStateOf<String?>(null) }
-    var passwordError by remember { mutableStateOf<String?>(null) }
-    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
-
-    val context = LocalContext.current
-
-    fun validateInputs(): Boolean {
-        var isValid = true
-
-        // Email validation
-        if (email.isEmpty()) {
-            emailError = "Email is required"
-            isValid = false
-        } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            emailError = "Invalid email format"
-            isValid = false
-        } else {
-            emailError = null
-        }
-
-        // Password validation
-        val passwordRegex = "^(?=.*[A-Z])(?=.*[@#$%^&+=!]).{8,}$".toRegex()
-        if (password.isEmpty()) {
-            passwordError = "Password is required"
-            isValid = false
-        } else if (password.length < 8) {
-            passwordError = "At least 8 characters required"
-            isValid = false
-        } else if (!password.contains("[A-Z]".toRegex())) {
-            passwordError = "At least one uppercase letter required"
-            isValid = false
-        } else if (!password.contains("[!@#$%^&*(),.?\":{}|<>]".toRegex())) {
-            passwordError = "At least one special character required"
-            isValid = false
-        } else {
-            passwordError = null
-        }
-
-        // Confirm Password validation
-        if (confirmPassword.isEmpty()) {
-            confirmPasswordError = "Please confirm your password"
-            isValid = false
-        } else if (confirmPassword != password) {
-            confirmPasswordError = "Passwords do not match"
-            isValid = false
-        } else {
-            confirmPasswordError = null
-        }
-
-        return isValid
-    }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -137,82 +124,66 @@ fun SignupContent(
             text = "Create Account",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
         )
         
         Text(
             text = "Join our community to make a social impact",
             fontSize = 14.sp,
             color = Color.Gray,
-            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp),
+            textAlign = TextAlign.Center
         )
 
-        // Email Field
         PrimaryTextField(
-            value = email,
-            onValueChange = { 
-                email = it
-                if (emailError != null) emailError = null
-            },
+            value = uiState.email,
+            onValueChange = onEmailChange,
             label = "Email Address",
             leadingIcon = Icons.Default.Email,
-            isError = emailError != null,
-            supportingText = emailError,
+            isError = uiState.emailError != null,
+            supportingText = uiState.emailError,
             imeAction = ImeAction.Next
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Password Field
         PrimaryTextField(
-            value = password,
-            onValueChange = { 
-                password = it
-                if (passwordError != null) passwordError = null
-            },
+            value = uiState.password,
+            onValueChange = onPasswordChange,
             label = "Password",
             leadingIcon = Icons.Default.Lock,
             visualTransformation = PasswordVisualTransformation(),
-            isError = passwordError != null,
-            supportingText = passwordError,
+            isError = uiState.passwordError != null,
+            supportingText = uiState.passwordError,
             imeAction = ImeAction.Next
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Confirm Password Field
         PrimaryTextField(
-            value = confirmPassword,
-            onValueChange = { 
-                confirmPassword = it
-                if (confirmPasswordError != null) confirmPasswordError = null
-            },
+            value = uiState.confirmPassword,
+            onValueChange = onConfirmPasswordChange,
             label = "Confirm Password",
             leadingIcon = Icons.Default.CheckCircle,
             visualTransformation = PasswordVisualTransformation(),
-            isError = confirmPasswordError != null,
-            supportingText = confirmPasswordError,
+            isError = uiState.confirmPasswordError != null,
+            supportingText = uiState.confirmPasswordError,
             imeAction = ImeAction.Done
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Sign Up Button
-        if (isLoading) {
+        if (uiState.isLoading) {
             CircularProgressIndicator(modifier = Modifier.padding(16.dp))
         } else {
             PrimaryButton(
                 text = "Sign Up",
-                onClick = {
-                    if (validateInputs()) {
-                        onSignUp(email, password)
-                    }
-                }
+                onClick = onSignUp
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Divider or "Or" text
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(vertical = 16.dp)
@@ -224,12 +195,10 @@ fun SignupContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Google Sign In Button
             LightButton(
                 text = "Continue with Google",
-                onClick = {
-                    // Integration point for Google One Tap / Google Sign In
-                }
+                icon = Icons.Default.AccountCircle,
+                onClick = onGoogleSignIn
             )
         }
 
@@ -246,8 +215,12 @@ fun SignupContent(
 fun SignupPreview() {
     SocialimpactTheme {
         SignupContent(
-            isLoading = false,
-            onSignUp = { _, _ -> },
+            uiState = SignupUiState(),
+            onEmailChange = {},
+            onPasswordChange = {},
+            onConfirmPasswordChange = {},
+            onSignUp = {},
+            onGoogleSignIn = {},
             onBack = {}
         )
     }
