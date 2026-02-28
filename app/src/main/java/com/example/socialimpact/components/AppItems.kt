@@ -93,7 +93,7 @@ fun AppItem(
                 text = description,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onBackground,
                 lineHeight = 15.sp
             )
         }

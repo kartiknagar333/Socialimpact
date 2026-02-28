@@ -1,4 +1,4 @@
-package com.example.socialimpact.ui.viewmodel
+package com.example.socialimpact.ui.state
 
 data class SignupUiState(
     val email: String = "",

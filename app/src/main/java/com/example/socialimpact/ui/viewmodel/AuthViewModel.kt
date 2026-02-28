@@ -9,7 +9,8 @@ import com.example.socialimpact.domain.repository.AuthRepository
 import com.example.socialimpact.domain.usecase.ValidateConfirmPassword
 import com.example.socialimpact.domain.usecase.ValidateEmail
 import com.example.socialimpact.domain.usecase.ValidatePassword
-import com.example.socialimpact.ui.viewmodel.SignupUiState
+import com.example.socialimpact.ui.state.SigninUiState
+import com.example.socialimpact.ui.state.SignupUiState
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -20,37 +21,39 @@ class AuthViewModel(
     private val validateConfirmPassword: ValidateConfirmPassword = ValidateConfirmPassword()
 ) : ViewModel() {
 
-    private val _uiState = mutableStateOf(SignupUiState())
-    val uiState: State<SignupUiState> = _uiState
+    // Signup State
+    private val _signupUiState = mutableStateOf(SignupUiState())
+    val signupUiState: State<SignupUiState> = _signupUiState
 
-    fun onEmailChange(email: String) {
-        _uiState.value = _uiState.value.copy(email = email, emailError = null)
+    // Signin State
+    private val _signinUiState = mutableStateOf(SigninUiState())
+    val signinUiState: State<SigninUiState> = _signinUiState
+
+    // Signup Events
+    fun onSignupEmailChange(email: String) {
+        _signupUiState.value = _signupUiState.value.copy(email = email, emailError = null)
     }
 
-    fun onPasswordChange(password: String) {
-        _uiState.value = _uiState.value.copy(password = password, passwordError = null)
+    fun onSignupPasswordChange(password: String) {
+        _signupUiState.value = _signupUiState.value.copy(password = password, passwordError = null)
     }
 
-    fun onConfirmPasswordChange(confirmPassword: String) {
-        _uiState.value = _uiState.value.copy(confirmPassword = confirmPassword, confirmPasswordError = null)
+    fun onSignupConfirmPasswordChange(confirmPassword: String) {
+        _signupUiState.value = _signupUiState.value.copy(confirmPassword = confirmPassword, confirmPasswordError = null)
     }
 
     fun signUp() {
-        val emailResult = validateEmail.execute(_uiState.value.email)
-        val passwordResult = validatePassword.execute(_uiState.value.password)
+        val emailResult = validateEmail.execute(_signupUiState.value.email)
+        val passwordResult = validatePassword.execute(_signupUiState.value.password)
         val confirmPasswordResult = validateConfirmPassword.execute(
-            _uiState.value.password,
-            _uiState.value.confirmPassword
+            _signupUiState.value.password,
+            _signupUiState.value.confirmPassword
         )
 
-        val hasError = listOf(
-            emailResult,
-            passwordResult,
-            confirmPasswordResult
-        ).any { !it.successful }
+        val hasError = listOf(emailResult, passwordResult, confirmPasswordResult).any { !it.successful }
 
         if (hasError) {
-            _uiState.value = _uiState.value.copy(
+            _signupUiState.value = _signupUiState.value.copy(
                 emailError = emailResult.errorMessage,
                 passwordError = passwordResult.errorMessage,
                 confirmPasswordError = confirmPasswordResult.errorMessage
@@ -59,33 +62,84 @@ class AuthViewModel(
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            repository.signUpWithEmail(_uiState.value.email, _uiState.value.password).collectLatest { result ->
+            _signupUiState.value = _signupUiState.value.copy(isLoading = true)
+            repository.signUpWithEmail(_signupUiState.value.email, _signupUiState.value.password).collectLatest { result ->
                 result.onSuccess {
-                    _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = true)
+                    _signupUiState.value = _signupUiState.value.copy(isLoading = false, isSuccess = true)
                 }
                 result.onFailure { error ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, error = error.message)
+                    _signupUiState.value = _signupUiState.value.copy(isLoading = false, error = error.message)
                 }
             }
         }
     }
 
-    fun signInWithGoogle(idToken: String) {
+    // Signin Events
+    fun onSigninEmailChange(email: String) {
+        _signinUiState.value = _signinUiState.value.copy(email = email, emailError = null)
+    }
+
+    fun onSigninPasswordChange(password: String) {
+        _signinUiState.value = _signinUiState.value.copy(password = password, passwordError = null)
+    }
+
+    fun signIn() {
+        val emailResult = validateEmail.execute(_signinUiState.value.email)
+        val passwordResult = validatePassword.execute(_signinUiState.value.password)
+
+        val hasError = listOf(emailResult, passwordResult).any { !it.successful }
+
+        if (hasError) {
+            _signinUiState.value = _signinUiState.value.copy(
+                emailError = emailResult.errorMessage,
+                passwordError = passwordResult.errorMessage
+            )
+            return
+        }
+
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            _signinUiState.value = _signinUiState.value.copy(isLoading = true)
+            repository.signInWithEmail(_signinUiState.value.email, _signinUiState.value.password).collectLatest { result ->
+                result.onSuccess {
+                    _signinUiState.value = _signinUiState.value.copy(isLoading = false, isSuccess = true)
+                }
+                result.onFailure { error ->
+                    _signinUiState.value = _signinUiState.value.copy(isLoading = false, error = error.message)
+                }
+            }
+        }
+    }
+
+    fun signInWithGoogle(idToken: String, isSignup: Boolean = true) {
+        viewModelScope.launch {
+            if (isSignup) _signupUiState.value = _signupUiState.value.copy(isLoading = true)
+            else _signinUiState.value = _signinUiState.value.copy(isLoading = true)
+
             repository.signInWithGoogle(idToken).collectLatest { result ->
                 result.onSuccess {
-                    _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = true)
+                    if (isSignup) _signupUiState.value = _signupUiState.value.copy(isLoading = false, isSuccess = true)
+                    else _signinUiState.value = _signinUiState.value.copy(isLoading = false, isSuccess = true)
                 }
                 result.onFailure { error ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, error = error.message)
+                    if (isSignup) _signupUiState.value = _signupUiState.value.copy(isLoading = false, error = error.message)
+                    else _signinUiState.value = _signinUiState.value.copy(isLoading = false, error = error.message)
                 }
             }
         }
     }
 
-    fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+    fun logout() {
+        repository.logout()
+        // Reset states
+        _signinUiState.value = SigninUiState()
+        _signupUiState.value = SignupUiState()
+    }
+
+    fun clearSignupError() {
+        _signupUiState.value = _signupUiState.value.copy(error = null)
+    }
+
+    fun clearSigninError() {
+        _signinUiState.value = _signinUiState.value.copy(error = null)
     }
 }

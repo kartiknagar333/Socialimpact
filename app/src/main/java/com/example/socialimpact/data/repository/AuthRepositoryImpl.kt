@@ -28,8 +28,21 @@ class AuthRepositoryImpl(
                 }
                 close()
             }
-        awaitClose { /* No cleanup needed for Firebase tasks */ }
-    }.flowOn(Dispatchers.IO) // Ensures Firebase operations don't block the Main thread
+        awaitClose { }
+    }.flowOn(Dispatchers.IO)
+
+    override fun signInWithEmail(email: String, password: String): Flow<Result<AuthResult>> = callbackFlow {
+        firebaseAuth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    trySend(Result.success(task.result!!))
+                } else {
+                    trySend(Result.failure(task.exception ?: Exception("Sign in failed")))
+                }
+                close()
+            }
+        awaitClose { }
+    }.flowOn(Dispatchers.IO)
 
     override fun signInWithGoogle(idToken: String): Flow<Result<AuthResult>> = callbackFlow {
         val credential = GoogleAuthProvider.getCredential(idToken, null)
@@ -44,4 +57,8 @@ class AuthRepositoryImpl(
             }
         awaitClose { }
     }.flowOn(Dispatchers.IO)
+
+    override fun logout() {
+        firebaseAuth.signOut()
+    }
 }
