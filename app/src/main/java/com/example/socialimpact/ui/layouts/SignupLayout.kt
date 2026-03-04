@@ -134,7 +134,7 @@ fun SignupContent(
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
             )
-            
+
             Text(
                 text = "Join our community to make a social impact",
                 fontSize = 14.sp,

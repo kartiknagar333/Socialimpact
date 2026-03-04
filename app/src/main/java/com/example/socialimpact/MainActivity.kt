@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
         // Firebase Auth automatically remembers the logged-in user securely.
         val currentUser = FirebaseAuth.getInstance().currentUser
         val startDestination = if (currentUser != null) "home" else "splash"
@@ -79,7 +79,7 @@ fun AppNavigation(startDestination: String) {
         composable("signin") {
             SigninLayout(
                 onBack = { navController.popBackStack() },
-                onSuccess = { 
+                onSuccess = {
                     navController.navigate("home") {
                         popUpTo("splash") { inclusive = true }
                     }
@@ -89,7 +89,7 @@ fun AppNavigation(startDestination: String) {
         composable("signup") {
             SignupLayout(
                 onBack = { navController.popBackStack() },
-                onSuccess = { 
+                onSuccess = {
                     navController.navigate("home") {
                         popUpTo("splash") { inclusive = true }
                     }

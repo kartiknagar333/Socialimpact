@@ -133,7 +133,7 @@ fun SigninContent(
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
             )
-            
+
             Text(
                 text = "Sign in to continue your social impact journey",
                 fontSize = 14.sp,
