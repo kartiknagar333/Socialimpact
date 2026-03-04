@@ -1,7 +1,5 @@
 package com.example.socialimpact.ui.viewmodel
 
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.socialimpact.data.repository.AuthRepositoryImpl
@@ -11,7 +9,11 @@ import com.example.socialimpact.domain.usecase.ValidateEmail
 import com.example.socialimpact.domain.usecase.ValidatePassword
 import com.example.socialimpact.ui.state.SigninUiState
 import com.example.socialimpact.ui.state.SignupUiState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class AuthViewModel(
@@ -22,24 +24,24 @@ class AuthViewModel(
 ) : ViewModel() {
 
     // Signup State
-    private val _signupUiState = mutableStateOf(SignupUiState())
-    val signupUiState: State<SignupUiState> = _signupUiState
+    private val _signupUiState = MutableStateFlow(SignupUiState())
+    val signupUiState: StateFlow<SignupUiState> = _signupUiState.asStateFlow()
 
     // Signin State
-    private val _signinUiState = mutableStateOf(SigninUiState())
-    val signinUiState: State<SigninUiState> = _signinUiState
+    private val _signinUiState = MutableStateFlow(SigninUiState())
+    val signinUiState: StateFlow<SigninUiState> = _signinUiState.asStateFlow()
 
     // Signup Events
     fun onSignupEmailChange(email: String) {
-        _signupUiState.value = _signupUiState.value.copy(email = email, emailError = null)
+        _signupUiState.update { it.copy(email = email, emailError = null) }
     }
 
     fun onSignupPasswordChange(password: String) {
-        _signupUiState.value = _signupUiState.value.copy(password = password, passwordError = null)
+        _signupUiState.update { it.copy(password = password, passwordError = null) }
     }
 
     fun onSignupConfirmPasswordChange(confirmPassword: String) {
-        _signupUiState.value = _signupUiState.value.copy(confirmPassword = confirmPassword, confirmPasswordError = null)
+        _signupUiState.update { it.copy(confirmPassword = confirmPassword, confirmPasswordError = null) }
     }
 
     fun signUp() {
@@ -53,22 +55,24 @@ class AuthViewModel(
         val hasError = listOf(emailResult, passwordResult, confirmPasswordResult).any { !it.successful }
 
         if (hasError) {
-            _signupUiState.value = _signupUiState.value.copy(
-                emailError = emailResult.errorMessage,
-                passwordError = passwordResult.errorMessage,
-                confirmPasswordError = confirmPasswordResult.errorMessage
-            )
+            _signupUiState.update {
+                it.copy(
+                    emailError = emailResult.errorMessage,
+                    passwordError = passwordResult.errorMessage,
+                    confirmPasswordError = confirmPasswordResult.errorMessage
+                )
+            }
             return
         }
 
         viewModelScope.launch {
-            _signupUiState.value = _signupUiState.value.copy(isLoading = true)
+            _signupUiState.update { it.copy(isLoading = true) }
             repository.signUpWithEmail(_signupUiState.value.email, _signupUiState.value.password).collectLatest { result ->
                 result.onSuccess {
-                    _signupUiState.value = _signupUiState.value.copy(isLoading = false, isSuccess = true)
+                    _signupUiState.update { it.copy(isLoading = false, isSuccess = true) }
                 }
                 result.onFailure { error ->
-                    _signupUiState.value = _signupUiState.value.copy(isLoading = false, error = error.message)
+                    _signupUiState.update { it.copy(isLoading = false, error = error.message) }
                 }
             }
         }
@@ -76,11 +80,11 @@ class AuthViewModel(
 
     // Signin Events
     fun onSigninEmailChange(email: String) {
-        _signinUiState.value = _signinUiState.value.copy(email = email, emailError = null)
+        _signinUiState.update { it.copy(email = email, emailError = null) }
     }
 
     fun onSigninPasswordChange(password: String) {
-        _signinUiState.value = _signinUiState.value.copy(password = password, passwordError = null)
+        _signinUiState.update { it.copy(password = password, passwordError = null) }
     }
 
     fun signIn() {
@@ -90,21 +94,23 @@ class AuthViewModel(
         val hasError = listOf(emailResult, passwordResult).any { !it.successful }
 
         if (hasError) {
-            _signinUiState.value = _signinUiState.value.copy(
-                emailError = emailResult.errorMessage,
-                passwordError = passwordResult.errorMessage
-            )
+            _signinUiState.update {
+                it.copy(
+                    emailError = emailResult.errorMessage,
+                    passwordError = passwordResult.errorMessage
+                )
+            }
             return
         }
 
         viewModelScope.launch {
-            _signinUiState.value = _signinUiState.value.copy(isLoading = true)
+            _signinUiState.update { it.copy(isLoading = true) }
             repository.signInWithEmail(_signinUiState.value.email, _signinUiState.value.password).collectLatest { result ->
                 result.onSuccess {
-                    _signinUiState.value = _signinUiState.value.copy(isLoading = false, isSuccess = true)
+                    _signinUiState.update { it.copy(isLoading = false, isSuccess = true) }
                 }
                 result.onFailure { error ->
-                    _signinUiState.value = _signinUiState.value.copy(isLoading = false, error = error.message)
+                    _signinUiState.update { it.copy(isLoading = false, error = error.message) }
                 }
             }
         }
@@ -112,17 +118,17 @@ class AuthViewModel(
 
     fun signInWithGoogle(idToken: String, isSignup: Boolean = true) {
         viewModelScope.launch {
-            if (isSignup) _signupUiState.value = _signupUiState.value.copy(isLoading = true)
-            else _signinUiState.value = _signinUiState.value.copy(isLoading = true)
+            if (isSignup) _signupUiState.update { it.copy(isLoading = true) }
+            else _signinUiState.update { it.copy(isLoading = true) }
 
             repository.signInWithGoogle(idToken).collectLatest { result ->
                 result.onSuccess {
-                    if (isSignup) _signupUiState.value = _signupUiState.value.copy(isLoading = false, isSuccess = true)
-                    else _signinUiState.value = _signinUiState.value.copy(isLoading = false, isSuccess = true)
+                    if (isSignup) _signupUiState.update { it.copy(isLoading = false, isSuccess = true) }
+                    else _signinUiState.update { it.copy(isLoading = false, isSuccess = true) }
                 }
                 result.onFailure { error ->
-                    if (isSignup) _signupUiState.value = _signupUiState.value.copy(isLoading = false, error = error.message)
-                    else _signinUiState.value = _signinUiState.value.copy(isLoading = false, error = error.message)
+                    if (isSignup) _signupUiState.update { it.copy(isLoading = false, error = error.message) }
+                    else _signinUiState.update { it.copy(isLoading = false, error = error.message) }
                 }
             }
         }
@@ -136,10 +142,10 @@ class AuthViewModel(
     }
 
     fun clearSignupError() {
-        _signupUiState.value = _signupUiState.value.copy(error = null)
+        _signupUiState.update { it.copy(error = null) }
     }
 
     fun clearSigninError() {
-        _signinUiState.value = _signinUiState.value.copy(error = null)
+        _signinUiState.update { it.copy(error = null) }
     }
 }

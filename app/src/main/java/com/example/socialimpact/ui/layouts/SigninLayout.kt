@@ -1,6 +1,5 @@
 package com.example.socialimpact.ui.layouts
 
-import android.app.Activity
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -12,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -25,6 +23,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.socialimpact.R
 import com.example.socialimpact.components.GlassyAuthBackground
@@ -45,7 +44,7 @@ fun SigninLayout(
     modifier: Modifier = Modifier,
     viewModel: AuthViewModel = viewModel()
 ) {
-    val uiState by viewModel.signinUiState
+    val uiState by viewModel.signinUiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val credentialManager = remember { CredentialManager.create(context) }

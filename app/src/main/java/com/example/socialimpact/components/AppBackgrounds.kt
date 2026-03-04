@@ -26,8 +26,8 @@ fun GlassyAuthBackground(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+    val primaryColor = MaterialTheme.colorScheme.tertiary
+    val tertiaryColor = MaterialTheme.colorScheme.primary
     val backgroundColor = MaterialTheme.colorScheme.background
 
     val infiniteTransition = rememberInfiniteTransition(label = "glassy_bg_transition")
