@@ -1,5 +1,6 @@
 package com.example.socialimpact
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,41 +10,72 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.socialimpact.ui.layouts.HomeLayout
+import com.example.socialimpact.di.qualifier.EmailAuth
+import com.example.socialimpact.ui.HomeActivity
 import com.example.socialimpact.ui.layouts.SigninLayout
 import com.example.socialimpact.ui.layouts.SignupLayout
 import com.example.socialimpact.ui.layouts.SplashLayout
 import com.example.socialimpact.ui.theme.SocialimpactTheme
+import com.example.socialimpact.ui.viewmodel.AuthViewModelFactory
 import com.google.firebase.auth.FirebaseAuth
+import javax.inject.Inject
 
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var authViewModelFactory: AuthViewModelFactory
+
+    @EmailAuth
+    @Inject
+    lateinit var firebaseAuth: FirebaseAuth
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
 
-        // Firebase Auth automatically remembers the logged-in user securely.
-        val currentUser = FirebaseAuth.getInstance().currentUser
-        val startDestination = if (currentUser != null) "home" else "splash"
+        (application as SocialImpactApp)
+            .appComponent
+            .mainActivityComponent()
+            .create()
+            .inject(this)
+
+        val currentUser = firebaseAuth.currentUser
+        if (currentUser != null) {
+            navigateToHome()
+            return
+        }
+
+        enableEdgeToEdge()
 
         setContent {
             SocialimpactTheme {
-                AppNavigation(startDestination = startDestination)
+                AppNavigation(
+                    factory = authViewModelFactory,
+                    onLoginSuccess = { navigateToHome() }
+                )
             }
         }
+    }
+
+    private fun navigateToHome() {
+        startActivity(Intent(this, HomeActivity::class.java))
+        finish()
     }
 }
 
 @Composable
-fun AppNavigation(startDestination: String) {
+fun AppNavigation(
+    factory: ViewModelProvider.Factory,
+    onLoginSuccess: () -> Unit
+) {
     val navController = rememberNavController()
 
-    // Removed innerPadding from NavHost to allow backgrounds to cover system bars (Edge-to-Edge)
     NavHost(
         navController = navController,
-        startDestination = startDestination,
+        startDestination = "splash",
         modifier = Modifier.fillMaxSize(),
         enterTransition = {
             slideIntoContainer(
@@ -78,32 +110,26 @@ fun AppNavigation(startDestination: String) {
         }
         composable("signin") {
             SigninLayout(
-                onBack = { navController.popBackStack() },
-                onSuccess = {
-                    navController.navigate("home") {
-                        popUpTo("splash") { inclusive = true }
+                factory = factory,
+                onSignup = {
+                    navController.navigate("signup") {
+                        popUpTo("signin") { inclusive = true }
                     }
-                }
+                },
+                onBack = { navController.popBackStack() },
+                onSuccess = onLoginSuccess
             )
         }
         composable("signup") {
             SignupLayout(
+                factory = factory,
+                onSignin = {
+                    navController.navigate("signin") {
+                        popUpTo("signup") { inclusive = true }
+                    }
+                },
                 onBack = { navController.popBackStack() },
-                onSuccess = {
-                    navController.navigate("home") {
-                        popUpTo("splash") { inclusive = true }
-                    }
-                }
-            )
-        }
-        composable("home") {
-            HomeLayout(
-                onLogout = {
-                    FirebaseAuth.getInstance().signOut()
-                    navController.navigate("splash") {
-                        popUpTo("home") { inclusive = true }
-                    }
-                }
+                onSuccess = onLoginSuccess
             )
         }
     }

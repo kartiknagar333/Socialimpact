@@ -27,7 +27,8 @@ fun PrimaryTextField(
     supportingText: String? = null,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     imeAction: ImeAction = ImeAction.Next,
-    singleLine: Boolean = true
+    singleLine: Boolean = true,
+    enabled: Boolean = true
 ) {
     OutlinedTextField(
         value = value,
@@ -41,6 +42,7 @@ fun PrimaryTextField(
         supportingText = supportingText?.let {
             { Text(text = it) }
         },
+        enabled = enabled,
         visualTransformation = visualTransformation,
         keyboardOptions = KeyboardOptions(imeAction = imeAction),
         singleLine = singleLine,
@@ -61,7 +63,13 @@ fun PrimaryTextField(
             errorLabelColor = MaterialTheme.colorScheme.error,
             errorLeadingIconColor = MaterialTheme.colorScheme.error,
             errorCursorColor = MaterialTheme.colorScheme.error,
-            errorSupportingTextColor = MaterialTheme.colorScheme.error
+            errorSupportingTextColor = MaterialTheme.colorScheme.error,
+
+            // Disabled state colors
+            disabledBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            disabledTextColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     )
 }

@@ -23,6 +23,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.socialimpact.R
@@ -39,10 +40,12 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SignupLayout(
+    onSignin: () -> Unit,
     onBack: () -> Unit,
     onSuccess: () -> Unit,
+    factory: ViewModelProvider.Factory,
     modifier: Modifier = Modifier,
-    viewModel: AuthViewModel = viewModel()
+    viewModel: AuthViewModel = viewModel(factory = factory)
 ) {
     val uiState by viewModel.signupUiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -53,17 +56,13 @@ fun SignupLayout(
         if (uiState.isSuccess) {
             Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
             onSuccess()
+            viewModel.resetAuthState()
         }
     }
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
-            val errorMessage = if (it.contains("email address is already in use")) {
-                "This email is already registered."
-            } else {
-                it
-            }
-            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
             viewModel.clearSignupError()
         }
     }
@@ -73,7 +72,7 @@ fun SignupLayout(
         onEmailChange = viewModel::onSignupEmailChange,
         onPasswordChange = viewModel::onSignupPasswordChange,
         onConfirmPasswordChange = viewModel::onSignupConfirmPasswordChange,
-        onSignUp = viewModel::signUp,
+        onSignUp = { viewModel.signUp() },
         onGoogleSignIn = {
             val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
                 .setFilterByAuthorizedAccounts(false)
@@ -91,16 +90,27 @@ fun SignupLayout(
                         context = context
                     )
                     val credential = result.credential
-                    if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                        viewModel.signInWithGoogle(googleIdTokenCredential.idToken, isSignup = true)
+                    if (credential is CustomCredential &&
+                        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                    ) {
+                        val googleIdTokenCredential =
+                            GoogleIdTokenCredential.createFrom(credential.data)
+                        viewModel.signInWithGoogle(
+                            googleIdTokenCredential.idToken,
+                            isSignup = true
+                        )
                     }
                 } catch (e: GetCredentialException) {
                     Log.e("Auth", "Credential Manager Error: ${e.message}")
-                    Toast.makeText(context, "Google registration failed. Please try again.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Google registration failed. Please try again.",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         },
+        onSignin = onSignin,
         onBack = onBack,
         modifier = modifier
     )
@@ -114,6 +124,7 @@ fun SignupContent(
     onConfirmPasswordChange: (String) -> Unit,
     onSignUp: () -> Unit,
     onGoogleSignIn: () -> Unit,
+    onSignin: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -195,12 +206,20 @@ fun SignupContent(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(vertical = 16.dp)
                 ) {
-                    HorizontalDivider(modifier = Modifier.weight(1f),color = MaterialTheme.colorScheme.onBackground)
-                    Text(" OR ", modifier = Modifier.padding(horizontal = 8.dp), color = MaterialTheme.colorScheme.onBackground)
-                    HorizontalDivider(modifier = Modifier.weight(1f),color = MaterialTheme.colorScheme.onBackground)
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        " OR ",
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
 
                 LightButton(
                     text = "Continue with Google",
@@ -211,7 +230,7 @@ fun SignupContent(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            TextButton(onClick = onBack) {
+            TextButton(onClick = onSignin) {
                 Text("Already have an account? Sign In")
             }
         }
@@ -229,6 +248,7 @@ fun SignupPreview() {
             onConfirmPasswordChange = {},
             onSignUp = {},
             onGoogleSignIn = {},
+            onSignin = {},
             onBack = {}
         )
     }

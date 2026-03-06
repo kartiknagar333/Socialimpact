@@ -10,6 +10,6 @@ import kotlinx.coroutines.flow.Flow
 interface AuthRepository {
     fun signUpWithEmail(email: String, password: String): Flow<Result<AuthResult>>
     fun signInWithEmail(email: String, password: String): Flow<Result<AuthResult>>
-    fun signInWithGoogle(idToken: String): Flow<Result<AuthResult>>
+    fun signInWithGoogle(idToken: String, isSignup: Boolean): Flow<Result<AuthResult>>
     fun logout()
 }

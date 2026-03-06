@@ -1,8 +1,11 @@
+@file:Suppress("DEPRECATION")
+
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)   // ⭐ ADD THIS
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
-    alias(libs.plugins.ksp)
+    id("org.jetbrains.kotlin.kapt")  // ✅ ADD THIS
 }
 
 android {
@@ -29,13 +32,15 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
         compose = true
     }
 }
+
+
 
 dependencies {
     implementation(libs.androidx.core.ktx)
@@ -53,6 +58,7 @@ dependencies {
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
     implementation(libs.google.auth)
 
     // Credentials Manager
@@ -62,7 +68,9 @@ dependencies {
 
     // Dagger 2
     implementation(libs.dagger)
-    ksp(libs.dagger.compiler)
+    kapt(libs.dagger.compiler)
+    // Coroutines Tasks
+    implementation(libs.kotlinx.coroutines.play.services)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

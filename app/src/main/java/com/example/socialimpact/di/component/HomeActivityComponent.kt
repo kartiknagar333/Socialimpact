@@ -1,0 +1,23 @@
+package com.example.socialimpact.di.component
+
+import com.example.socialimpact.ui.HomeActivity
+import com.example.socialimpact.di.scope.ActivityScope
+import com.example.socialimpact.ui.viewmodel.EditProfileViewModelFactory
+import dagger.Subcomponent
+
+/**
+ * HomeActivityComponent — @ActivityScope subcomponent for HomeActivity.
+ */
+@ActivityScope
+@Subcomponent
+interface HomeActivityComponent {
+
+    @Subcomponent.Factory
+    interface Factory {
+        fun create(): HomeActivityComponent
+    }
+
+    fun inject(activity: HomeActivity)
+    
+    fun editProfileViewModelFactory(): EditProfileViewModelFactory
+}

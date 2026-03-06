@@ -23,6 +23,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.socialimpact.R
@@ -39,10 +40,12 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SigninLayout(
+    onSignup: () -> Unit,
     onBack: () -> Unit,
     onSuccess: () -> Unit,
+    factory: ViewModelProvider.Factory,
     modifier: Modifier = Modifier,
-    viewModel: AuthViewModel = viewModel()
+    viewModel: AuthViewModel = viewModel(factory = factory)
 ) {
     val uiState by viewModel.signinUiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -51,18 +54,24 @@ fun SigninLayout(
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
+            Log.d("AUTH_DEBUG", "Signin Success - Navigating Home")
             Toast.makeText(context, "Welcome back!", Toast.LENGTH_SHORT).show()
             onSuccess()
+            viewModel.resetAuthState() 
         }
     }
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
+            Log.e("AUTH_DEBUG", "Signin Error: $it")
             val errorMessage = when {
-                it.contains("invalid-credential") || it.contains("wrong-password") -> "Incorrect email or password."
-                it.contains("user-not-found") -> "No account found with this email."
-                it.contains("network-request-failed") -> "Network error. Check your connection."
-                else -> "Sign in failed. Please try again."
+                it.contains("invalid-credential") || it.contains("wrong-password") ->
+                    "Incorrect email or password."
+                it.contains("user-not-found") ->
+                    "No account found with this email."
+                it.contains("network-request-failed") ->
+                    "Network error. Check your connection."
+                else -> it
             }
             Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
             viewModel.clearSigninError()
@@ -73,8 +82,12 @@ fun SigninLayout(
         uiState = uiState,
         onEmailChange = viewModel::onSigninEmailChange,
         onPasswordChange = viewModel::onSigninPasswordChange,
-        onSignIn = viewModel::signIn,
+        onSignIn = { 
+            Log.d("AUTH_DEBUG", "Sign In Button Clicked")
+            viewModel.signIn() 
+        },
         onGoogleSignIn = {
+            Log.d("AUTH_DEBUG", "Google Sign In Clicked")
             val googleIdOption: GetGoogleIdOption = GetGoogleIdOption.Builder()
                 .setFilterByAuthorizedAccounts(false)
                 .setServerClientId(context.getString(R.string.default_web_client_id))
@@ -91,16 +104,27 @@ fun SigninLayout(
                         context = context
                     )
                     val credential = result.credential
-                    if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                        viewModel.signInWithGoogle(googleIdTokenCredential.idToken, isSignup = false)
+                    if (credential is CustomCredential &&
+                        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                    ) {
+                        val googleIdTokenCredential =
+                            GoogleIdTokenCredential.createFrom(credential.data)
+                        viewModel.signInWithGoogle(
+                            googleIdTokenCredential.idToken,
+                            isSignup = false
+                        )
                     }
                 } catch (e: GetCredentialException) {
-                    Log.e("Auth", "Credential Manager Error: ${e.message}")
-                    Toast.makeText(context, "Google Sign-In failed. Please try again.", Toast.LENGTH_SHORT).show()
+                    Log.e("AUTH_DEBUG", "Credential Manager Error: ${e.message}")
+                    Toast.makeText(
+                        context,
+                        "Google Sign-In failed. Please try again.",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         },
+        onSignup = onSignup,
         onBack = onBack,
         modifier = modifier
     )
@@ -113,6 +137,7 @@ fun SigninContent(
     onPasswordChange: (String) -> Unit,
     onSignIn: () -> Unit,
     onGoogleSignIn: () -> Unit,
+    onSignup: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -181,9 +206,19 @@ fun SigninContent(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(vertical = 16.dp)
                 ) {
-                    HorizontalDivider(modifier = Modifier.weight(1f),color = MaterialTheme.colorScheme.onBackground)
-                    Text(" OR ", modifier = Modifier.padding(horizontal = 8.dp), color = MaterialTheme.colorScheme.onBackground)
-                    HorizontalDivider(modifier = Modifier.weight(1f),color = MaterialTheme.colorScheme.onBackground)
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        " OR ",
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -197,7 +232,7 @@ fun SigninContent(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            TextButton(onClick = onBack) {
+            TextButton(onClick = onSignup) {
                 Text("Don't have an account? Sign Up")
             }
         }
@@ -214,6 +249,7 @@ fun SigninPreview() {
             onPasswordChange = {},
             onSignIn = {},
             onGoogleSignIn = {},
+            onSignup = {},
             onBack = {}
         )
     }
