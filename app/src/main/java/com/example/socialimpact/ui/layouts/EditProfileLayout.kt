@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.socialimpact.components.PrimaryTextField
 import com.example.socialimpact.ui.state.EditProfileUiState
+import kotlinx.coroutines.launch
 
 enum class ProfileType { PERSON, NGO, CORPORATION }
 
@@ -43,6 +44,8 @@ fun EditProfileLayout(
     var registrationId by remember { mutableStateOf("") } // For NGO/Corp
     var website by remember { mutableStateOf("") } // For NGO/Corp
     var industry by remember { mutableStateOf("") } // For Corporation
+
+    val coroutineScope = rememberCoroutineScope()
 
     // Populate initial values when loaded from local storage
     LaunchedEffect(uiState.initialProfile) {
@@ -152,7 +155,11 @@ fun EditProfileLayout(
                 }
                 
                 SmallFloatingActionButton(
-                    onClick = { /* TODO: Change photo */ },
+                    onClick = { 
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Feature coming soon: Update profile picture")
+                        }
+                    },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = CircleShape,

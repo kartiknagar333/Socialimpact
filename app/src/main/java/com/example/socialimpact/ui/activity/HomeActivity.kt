@@ -56,7 +56,7 @@ class HomeActivity : ComponentActivity() {
                 HomeNavigation(
                     authFactory = authViewModelFactory,
                     editProfileFactory = editProfileViewModelFactory,
-                    isFromSignup = isFromSignup,
+                    isFromSignupExtra = isFromSignup,
                     onLogoutTriggered = { navigateToLogin() }
                 )
             }
@@ -85,7 +85,7 @@ class HomeActivity : ComponentActivity() {
 fun HomeNavigation(
     authFactory: ViewModelProvider.Factory,
     editProfileFactory: ViewModelProvider.Factory,
-    isFromSignup: Boolean,
+    isFromSignupExtra: Boolean,
     onLogoutTriggered: () -> Unit
 ) {
     val navController = rememberNavController()
@@ -94,7 +94,7 @@ fun HomeNavigation(
 
     NavHost(
         navController = navController, 
-        startDestination = if (isFromSignup) "edit_profile" else "home"
+        startDestination = if (isFromSignupExtra) "edit_profile" else "home"
     ) {
         composable("home") {
             HomeLayout(
@@ -105,39 +105,58 @@ fun HomeNavigation(
                     }
                 },
                 onEditProfile = {
-                    navController.navigate("edit_profile")
+                    navController.navigate("edit_profile/false")
                 }
             )
         }
         composable("edit_profile") {
-            val editProfileViewModel: EditProfileViewModel = viewModel(factory = editProfileFactory)
-            val uiState by editProfileViewModel.uiState.collectAsStateWithLifecycle()
+            EditProfileScreen(editProfileFactory, navController, isFromSignupExtra)
+        }
+        composable("edit_profile/{isFromSignup}") { backStackEntry ->
+            val isFromSignup = backStackEntry.arguments?.getString("isFromSignup")?.toBoolean() ?: false
+            EditProfileScreen(editProfileFactory, navController, isFromSignup)
+        }
+    }
+}
 
-            EditProfileLayout(
-                uiState = uiState,
-                isFromSignup = isFromSignup,
-                onBack = {
-                    if (navController.previousBackStackEntry != null) {
-                        navController.popBackStack()
-                    } else {
-                        navController.navigate("home") {
-                            popUpTo("edit_profile") { inclusive = true }
-                        }
-                    }
-                },
-                onSave = { type, fullName, orgName, regId, web, ind, ph, loc, bio ->
-                    editProfileViewModel.saveProfile(
-                        type, fullName, orgName, regId, web, ind, ph, loc, bio
-                    )
-                }
-            )
+@Composable
+fun EditProfileScreen(
+    factory: ViewModelProvider.Factory,
+    navController: androidx.navigation.NavController,
+    isFromSignup: Boolean
+) {
+    val editProfileViewModel: EditProfileViewModel = viewModel(factory = factory)
+    val uiState by editProfileViewModel.uiState.collectAsStateWithLifecycle()
 
-            LaunchedEffect(uiState.isSuccess) {
-                if (uiState.isSuccess) {
-                    navController.navigate("home") {
-                        popUpTo("edit_profile") { inclusive = true }
-                    }
+    EditProfileLayout(
+        uiState = uiState,
+        isFromSignup = isFromSignup,
+        onBack = {
+            if (navController.previousBackStackEntry != null) {
+                navController.popBackStack()
+            } else {
+                navController.navigate("home") {
+                    popUpTo("edit_profile") { inclusive = true }
                 }
+            }
+        },
+        onSave = { type, fullName, orgName, regId, web, ind, ph, loc, bio ->
+            if (isFromSignup) {
+                editProfileViewModel.saveProfile(
+                    type, fullName, orgName, regId, web, ind, ph, loc, bio
+                )
+            } else {
+                editProfileViewModel.updateProfile(
+                    type, fullName, orgName, regId, web, ind, ph, loc, bio
+                )
+            }
+        }
+    )
+
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            navController.navigate("home") {
+                popUpTo(if (isFromSignup) "edit_profile" else "edit_profile/false") { inclusive = true }
             }
         }
     }

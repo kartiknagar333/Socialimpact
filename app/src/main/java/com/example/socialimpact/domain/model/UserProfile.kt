@@ -40,4 +40,48 @@ sealed class UserProfile {
         val industry: String,
         override val type: ProfileType = ProfileType.CORPORATION
     ) : UserProfile()
+
+    companion object {
+        fun fromMap(uid: String, profileData: Map<String, Any>): UserProfile {
+            val typeStr = (profileData["type"] as? String)?.uppercase() ?: "PERSON"
+            val type = try {
+                ProfileType.valueOf(typeStr)
+            } catch (e: Exception) {
+                ProfileType.PERSON
+            }
+
+            val phone = profileData["phone"] as? String ?: ""
+            val location = profileData["location"] as? String ?: ""
+            val bio = profileData["bio"] as? String ?: ""
+
+            return when (type) {
+                ProfileType.PERSON -> Person(
+                    uid = uid,
+                    phone = phone,
+                    location = location,
+                    bio = bio,
+                    fullName = profileData["fullName"] as? String ?: ""
+                )
+                ProfileType.NGO -> Ngo(
+                    uid = uid,
+                    phone = phone,
+                    location = location,
+                    bio = bio,
+                    organizationName = profileData["organizationName"] as? String ?: "",
+                    registrationId = profileData["registrationId"] as? String ?: "",
+                    website = profileData["website"] as? String ?: ""
+                )
+                ProfileType.CORPORATION -> Corporation(
+                    uid = uid,
+                    phone = phone,
+                    location = location,
+                    bio = bio,
+                    organizationName = profileData["organizationName"] as? String ?: "",
+                    registrationId = profileData["registrationId"] as? String ?: "",
+                    website = profileData["website"] as? String ?: "",
+                    industry = profileData["industry"] as? String ?: ""
+                )
+            }
+        }
+    }
 }
