@@ -1,4 +1,4 @@
-package com.example.socialimpact.ui
+package com.example.socialimpact.ui.activity
 
 import android.content.Intent
 import android.os.Bundle
@@ -7,22 +7,26 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.socialimpact.MainActivity
-import com.example.socialimpact.SocialImpactApp
+import com.example.socialimpact.di.component.SocialImpactApp
 import com.example.socialimpact.ui.layouts.EditProfileLayout
 import com.example.socialimpact.ui.layouts.HomeLayout
 import com.example.socialimpact.ui.theme.SocialimpactTheme
 import com.example.socialimpact.ui.viewmodel.AuthViewModel
 import com.example.socialimpact.ui.viewmodel.AuthViewModelFactory
+import com.example.socialimpact.ui.viewmodel.EditProfileViewModel
+import com.example.socialimpact.ui.viewmodel.EditProfileViewModelFactory
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -30,6 +34,9 @@ class HomeActivity : ComponentActivity() {
 
     @Inject
     lateinit var authViewModelFactory: AuthViewModelFactory
+
+    @Inject
+    lateinit var editProfileViewModelFactory: EditProfileViewModelFactory
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,8 +54,9 @@ class HomeActivity : ComponentActivity() {
         setContent {
             SocialimpactTheme {
                 HomeNavigation(
-                    factory = authViewModelFactory,
-                    startDestination = if (isFromSignup) "edit_profile" else "home",
+                    authFactory = authViewModelFactory,
+                    editProfileFactory = editProfileViewModelFactory,
+                    isFromSignup = isFromSignup,
                     onLogoutTriggered = { navigateToLogin() }
                 )
             }
@@ -75,15 +83,19 @@ class HomeActivity : ComponentActivity() {
 
 @Composable
 fun HomeNavigation(
-    factory: ViewModelProvider.Factory,
-    startDestination: String,
+    authFactory: ViewModelProvider.Factory,
+    editProfileFactory: ViewModelProvider.Factory,
+    isFromSignup: Boolean,
     onLogoutTriggered: () -> Unit
 ) {
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
-    val authViewModel: AuthViewModel = viewModel(factory = factory)
+    val authViewModel: AuthViewModel = viewModel(factory = authFactory)
 
-    NavHost(navController = navController, startDestination = startDestination) {
+    NavHost(
+        navController = navController, 
+        startDestination = if (isFromSignup) "edit_profile" else "home"
+    ) {
         composable("home") {
             HomeLayout(
                 onLogout = {
@@ -98,7 +110,12 @@ fun HomeNavigation(
             )
         }
         composable("edit_profile") {
+            val editProfileViewModel: EditProfileViewModel = viewModel(factory = editProfileFactory)
+            val uiState by editProfileViewModel.uiState.collectAsStateWithLifecycle()
+
             EditProfileLayout(
+                uiState = uiState,
+                isFromSignup = isFromSignup,
                 onBack = {
                     if (navController.previousBackStackEntry != null) {
                         navController.popBackStack()
@@ -108,13 +125,20 @@ fun HomeNavigation(
                         }
                     }
                 },
-                onSave = {
-                    // Save logic would go here
+                onSave = { type, fullName, orgName, regId, web, ind, ph, loc, bio ->
+                    editProfileViewModel.saveProfile(
+                        type, fullName, orgName, regId, web, ind, ph, loc, bio
+                    )
+                }
+            )
+
+            LaunchedEffect(uiState.isSuccess) {
+                if (uiState.isSuccess) {
                     navController.navigate("home") {
                         popUpTo("edit_profile") { inclusive = true }
                     }
                 }
-            )
+            }
         }
     }
 }

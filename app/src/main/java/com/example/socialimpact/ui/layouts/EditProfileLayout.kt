@@ -17,6 +17,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.socialimpact.components.PrimaryTextField
+import com.example.socialimpact.ui.state.EditProfileUiState
 
 enum class ProfileType { PERSON, NGO, CORPORATION }
 
@@ -24,8 +25,10 @@ enum class ProfileType { PERSON, NGO, CORPORATION }
 @Composable
 fun EditProfileLayout(
     onBack: () -> Unit,
-    onSave: () -> Unit,
-    modifier: Modifier = Modifier
+    onSave: (ProfileType, String, String, String, String, String, String, String, String) -> Unit,
+    uiState: EditProfileUiState,
+    modifier: Modifier = Modifier,
+    isFromSignup: Boolean = false
 ) {
     var profileType by remember { mutableStateOf(ProfileType.PERSON) }
     
@@ -41,21 +44,46 @@ fun EditProfileLayout(
     var website by remember { mutableStateOf("") } // For NGO/Corp
     var industry by remember { mutableStateOf("") } // For Corporation
 
+    // Populate initial values when loaded from local storage
+    LaunchedEffect(uiState.initialProfile) {
+        uiState.initialProfile?.let { profile ->
+            profileType = profile.type
+            phone = profile.phone
+            bio = profile.bio
+            location = profile.location
+            fullName = profile.fullName
+            organizationName = profile.organizationName
+            registrationId = profile.registrationId
+            website = profile.website
+            industry = profile.industry
+        }
+    }
+
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            snackbarHostState.showSnackbar(it)
+        }
+    }
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             LargeTopAppBar(
                 title = {
                     Text(
-                        text = "Edit Profile",
+                        text = if (isFromSignup) "Set Profile" else "Edit Profile",
                         fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    if (!isFromSignup) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
                     }
                 },
                 scrollBehavior = scrollBehavior
@@ -63,9 +91,14 @@ fun EditProfileLayout(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = onSave,
+                onClick = {
+                    onSave(
+                        profileType, fullName, organizationName, registrationId,
+                        website, industry, phone, location, bio
+                    )
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
+                contentColor = Color.Black,
                 elevation = FloatingActionButtonDefaults.elevation(
                     defaultElevation = 8.dp,
                     pressedElevation = 12.dp,
@@ -73,12 +106,20 @@ fun EditProfileLayout(
                     hoveredElevation = 10.dp
                 )
             ) {
-                Text(text = "Save Profile")
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null
-                )
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(text = "Save Profile")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null
+                    )
+                }
             }
         },
         floatingActionButtonPosition = FabPosition.End
@@ -138,8 +179,8 @@ fun EditProfileLayout(
                         selected = profileType == type,
                         icon = {}, // Removes the checkmark icon when selected
                         colors = SegmentedButtonDefaults.colors(
-                            activeContainerColor = MaterialTheme.colorScheme.tertiary,
-                            activeContentColor = Color.Black,
+                            activeContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            activeContentColor = MaterialTheme.colorScheme.onBackground,
 
                             inactiveContainerColor = Color.Transparent,
                             inactiveContentColor = MaterialTheme.colorScheme.onBackground
@@ -156,7 +197,7 @@ fun EditProfileLayout(
                     PrimaryTextField(
                         value = fullName,
                         onValueChange = { fullName = it },
-                        label = "Full Name",
+                        label = "Full Name *",
                         leadingIcon = Icons.Default.Person
                     )
                 }
@@ -164,7 +205,7 @@ fun EditProfileLayout(
                     PrimaryTextField(
                         value = organizationName,
                         onValueChange = { organizationName = it },
-                        label = if (profileType == ProfileType.NGO) "NGO Name" else "Company Name",
+                        label = (if (profileType == ProfileType.NGO) "NGO Name" else "Company Name") + " *",
                         leadingIcon = if (profileType == ProfileType.NGO) Icons.Default.Groups else Icons.Default.Business
                     )
                     Spacer(modifier = Modifier.height(16.dp))

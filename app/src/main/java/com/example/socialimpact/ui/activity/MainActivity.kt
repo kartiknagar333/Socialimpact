@@ -1,4 +1,4 @@
-package com.example.socialimpact
+package com.example.socialimpact.ui.activity
 
 import android.content.Intent
 import android.os.Bundle
@@ -14,8 +14,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.socialimpact.di.component.SocialImpactApp
 import com.example.socialimpact.di.qualifier.EmailAuth
-import com.example.socialimpact.ui.HomeActivity
+import com.example.socialimpact.domain.repository.HomeRepository
 import com.example.socialimpact.ui.layouts.SigninLayout
 import com.example.socialimpact.ui.layouts.SignupLayout
 import com.example.socialimpact.ui.layouts.SplashLayout
@@ -32,6 +33,9 @@ class MainActivity : ComponentActivity() {
     @EmailAuth
     @Inject
     lateinit var firebaseAuth: FirebaseAuth
+    
+    @Inject
+    lateinit var homeRepository: HomeRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,7 +48,9 @@ class MainActivity : ComponentActivity() {
 
         val currentUser = firebaseAuth.currentUser
         if (currentUser != null) {
-            navigateToHome()
+            // Check if profile is set locally
+            val isProfileSet = homeRepository.isProfileSet()
+            navigateToHome(isFromSignup = !isProfileSet)
             return
         }
 
@@ -54,14 +60,19 @@ class MainActivity : ComponentActivity() {
             SocialimpactTheme {
                 AppNavigation(
                     factory = authViewModelFactory,
-                    onLoginSuccess = { navigateToHome() }
+                    onLoginSuccess = { isFromSignup -> 
+                        navigateToHome(isFromSignup = isFromSignup) 
+                    }
                 )
             }
         }
     }
 
-    private fun navigateToHome() {
-        startActivity(Intent(this, HomeActivity::class.java))
+    private fun navigateToHome(isFromSignup: Boolean) {
+        val intent = Intent(this, HomeActivity::class.java).apply {
+            putExtra("IS_FROM_SIGNUP", isFromSignup)
+        }
+        startActivity(intent)
         finish()
     }
 }
@@ -69,7 +80,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation(
     factory: ViewModelProvider.Factory,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: (Boolean) -> Unit
 ) {
     val navController = rememberNavController()
 
@@ -117,7 +128,7 @@ fun AppNavigation(
                     }
                 },
                 onBack = { navController.popBackStack() },
-                onSuccess = onLoginSuccess
+                onSuccess = { onLoginSuccess(false) }
             )
         }
         composable("signup") {
@@ -129,7 +140,7 @@ fun AppNavigation(
                     }
                 },
                 onBack = { navController.popBackStack() },
-                onSuccess = onLoginSuccess
+                onSuccess = { onLoginSuccess(true) }
             )
         }
     }

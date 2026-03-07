@@ -1,5 +1,6 @@
 package com.example.socialimpact.data.repository
 
+import android.content.SharedPreferences
 import android.util.Log
 import com.example.socialimpact.di.qualifier.EmailAuth
 import com.example.socialimpact.di.qualifier.GoogleAuth
@@ -20,7 +21,8 @@ import kotlin.coroutines.resumeWithException
 
 class AuthRepositoryImpl @Inject constructor(
     @EmailAuth private val emailAuth: FirebaseAuth,
-    @GoogleAuth private val googleAuth: FirebaseAuth
+    @GoogleAuth private val googleAuth: FirebaseAuth,
+    private val sharedPreferences: SharedPreferences
 ) : AuthRepository {
 
     override fun signUpWithEmail(email: String, password: String): Flow<Result<AuthResult>> = flow {
@@ -98,6 +100,9 @@ class AuthRepositoryImpl @Inject constructor(
     }.flowOn(Dispatchers.IO)
 
     override fun logout() {
+        // Clear local storage first
+        sharedPreferences.edit().clear().apply()
+
         when {
             isGoogleUser() -> googleAuth.signOut()
             else -> emailAuth.signOut()

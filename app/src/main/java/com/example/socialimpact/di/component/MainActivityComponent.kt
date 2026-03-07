@@ -1,6 +1,6 @@
 package com.example.socialimpact.di.component
 
-import com.example.socialimpact.MainActivity
+import com.example.socialimpact.ui.activity.MainActivity
 import com.example.socialimpact.di.scope.ActivityScope
 import dagger.Subcomponent
 

@@ -19,6 +19,15 @@ class EditProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(EditProfileUiState())
     val uiState: StateFlow<EditProfileUiState> = _uiState.asStateFlow()
 
+    init {
+        loadLocalProfile()
+    }
+
+    private fun loadLocalProfile() {
+        val localProfile = homeRepository.getLocalProfile()
+        _uiState.update { it.copy(initialProfile = localProfile) }
+    }
+
     fun saveProfile(
         type: ProfileType,
         fullName: String,

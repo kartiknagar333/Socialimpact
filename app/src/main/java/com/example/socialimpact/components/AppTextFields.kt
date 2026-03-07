@@ -49,9 +49,9 @@ fun PrimaryTextField(
         shape = RoundedCornerShape(20.dp),
         colors = OutlinedTextFieldDefaults.colors(
             // When Focused
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
-            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            focusedBorderColor = MaterialTheme.colorScheme.tertiary,
+            focusedLeadingIconColor = MaterialTheme.colorScheme.tertiary,
+            focusedLabelColor = MaterialTheme.colorScheme.tertiary,
             
             // When Unfocused (Default)
             unfocusedBorderColor = MaterialTheme.colorScheme.onSecondary,

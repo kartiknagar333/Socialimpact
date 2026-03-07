@@ -1,8 +1,6 @@
-package com.example.socialimpact
+package com.example.socialimpact.di.component
 
 import android.app.Application
-import com.example.socialimpact.di.component.AppComponent
-import com.example.socialimpact.di.component.DaggerAppComponent
 import com.example.socialimpact.di.module.AppModule
 
 /**
