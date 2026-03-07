@@ -233,7 +233,7 @@ fun SigninContent(
             Spacer(modifier = Modifier.weight(1f))
 
             TextButton(onClick = onSignup) {
-                Text("Don't have an account? Sign Up")
+                Text("Don't have an account? Sign Up",color = MaterialTheme.colorScheme.tertiary)
             }
         }
     }

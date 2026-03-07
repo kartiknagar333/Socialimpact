@@ -10,11 +10,13 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -24,6 +26,18 @@ class AuthRepositoryImpl @Inject constructor(
     @GoogleAuth private val googleAuth: FirebaseAuth,
     private val sharedPreferences: SharedPreferences
 ) : AuthRepository {
+
+    companion object {
+        private const val KEY_USER_TYPE = "user_type"
+        private const val KEY_FULL_NAME = "full_name"
+        private const val KEY_ORG_NAME = "org_name"
+        private const val KEY_REG_ID = "reg_id"
+        private const val KEY_WEBSITE = "website"
+        private const val KEY_INDUSTRY = "industry"
+        private const val KEY_PHONE = "phone"
+        private const val KEY_LOCATION = "location"
+        private const val KEY_BIO = "bio"
+    }
 
     override fun signUpWithEmail(email: String, password: String): Flow<Result<AuthResult>> = flow {
         try {
@@ -61,6 +75,8 @@ class AuthRepositoryImpl @Inject constructor(
                         }
                     }
             }
+            // Sync user data after successful sign in
+            syncUserDataInternal().collect { /* sync outcome logged within internal method */ }
             emit(Result.success(authResult))
         } catch (e: Exception) {
             emit(Result.failure(e))
@@ -76,11 +92,8 @@ class AuthRepositoryImpl @Inject constructor(
                         val isNewUser = result.additionalUserInfo?.isNewUser == true
                         
                         if (isSignup && !isNewUser) {
-                            // User tried to SIGN UP but already has an account
                             continuation.resumeWithException(Exception("This Google account is already registered. Please sign in."))
                         } else if (!isSignup && isNewUser) {
-                            // User tried to SIGN IN but has no account
-                            // Delete the newly created "empty" account to keep database clean
                             result.user?.delete()
                             continuation.resumeWithException(Exception("No account found with this Google email. Please sign up."))
                         } else {
@@ -91,26 +104,64 @@ class AuthRepositoryImpl @Inject constructor(
                         continuation.resumeWithException(exception)
                     }
             }
-            Log.d("AUTH_DEBUG", "Google Sign-In Success")
+            if (!isSignup) {
+                syncUserDataInternal().collect { }
+            }
             emit(Result.success(authResult))
         } catch (e: Exception) {
-            Log.e("AUTH_DEBUG", "Google Sign-In Error: ${e.message}")
             emit(Result.failure(e))
         }
     }.flowOn(Dispatchers.IO)
 
     override fun logout() {
-        // Clear local storage first
         sharedPreferences.edit().clear().apply()
-
         when {
             isGoogleUser() -> googleAuth.signOut()
             else -> emailAuth.signOut()
         }
     }
 
+    override fun syncUserData(): Flow<Result<Unit>> = syncUserDataInternal()
+
+    private fun syncUserDataInternal(): Flow<Result<Unit>> = flow {
+        try {
+            val uid = emailAuth.currentUser?.uid ?: googleAuth.currentUser?.uid 
+                ?: throw Exception("No user authenticated")
+
+            val document = FirebaseFirestore.getInstance()
+                .collection("account")
+                .document(uid)
+                .get()
+                .await()
+
+            if (document.exists()) {
+                val data = document.data ?: throw Exception("Document is empty")
+                
+                sharedPreferences.edit().apply {
+                    putString(KEY_USER_TYPE, data["type"] as? String)
+                    putString(KEY_FULL_NAME, data["fullName"] as? String)
+                    putString(KEY_ORG_NAME, data["organizationName"] as? String)
+                    putString(KEY_REG_ID, data["registrationId"] as? String)
+                    putString(KEY_WEBSITE, data["website"] as? String)
+                    putString(KEY_INDUSTRY, data["industry"] as? String)
+                    putString(KEY_PHONE, data["phone"] as? String)
+                    putString(KEY_LOCATION, data["location"] as? String)
+                    putString(KEY_BIO, data["bio"] as? String)
+                }.apply()
+                
+                emit(Result.success(Unit))
+            } else {
+                emit(Result.failure(Exception("No profile found on server")))
+            }
+        } catch (e: Exception) {
+            Log.e("Auth", "Sync failed: ${e.message}")
+            emit(Result.failure(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
     private fun isGoogleUser(): Boolean {
-        return emailAuth.currentUser?.providerData?.any {
+        val user = emailAuth.currentUser ?: googleAuth.currentUser
+        return user?.providerData?.any {
             it.providerId == GoogleAuthProvider.PROVIDER_ID
         } == true
     }

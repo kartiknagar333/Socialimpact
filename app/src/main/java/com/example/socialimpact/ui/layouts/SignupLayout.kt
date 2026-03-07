@@ -231,7 +231,7 @@ fun SignupContent(
             Spacer(modifier = Modifier.weight(1f))
 
             TextButton(onClick = onSignin) {
-                Text("Already have an account? Sign In")
+                Text("Already have an account? Sign In", color = MaterialTheme.colorScheme.tertiary)
             }
         }
     }
