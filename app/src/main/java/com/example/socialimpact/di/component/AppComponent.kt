@@ -23,8 +23,9 @@ interface AppComponent {
 
     fun mainActivityComponent(): MainActivityComponent.Factory
     
-    // Added for HomeActivity
     fun homeActivityComponent(): HomeActivityComponent.Factory
+    
+    fun uploadActivityComponent(): UploadActivityComponent.Factory
 
     @Component.Builder
     interface Builder {

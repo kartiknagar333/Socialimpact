@@ -23,12 +23,14 @@ fun PrimaryTextField(
     label: String,
     modifier: Modifier = Modifier,
     leadingIcon: ImageVector? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
     supportingText: String? = null,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     imeAction: ImeAction = ImeAction.Next,
     singleLine: Boolean = true,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    readOnly: Boolean = false
 ) {
     OutlinedTextField(
         value = value,
@@ -38,11 +40,13 @@ fun PrimaryTextField(
         leadingIcon = leadingIcon?.let {
             { Icon(imageVector = it, contentDescription = null) }
         },
+        trailingIcon = trailingIcon,
         isError = isError,
         supportingText = supportingText?.let {
             { Text(text = it) }
         },
         enabled = enabled,
+        readOnly = readOnly,
         visualTransformation = visualTransformation,
         keyboardOptions = KeyboardOptions(imeAction = imeAction),
         singleLine = singleLine,
