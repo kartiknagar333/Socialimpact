@@ -9,7 +9,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModelProvider
@@ -22,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.socialimpact.di.component.SocialImpactApp
 import com.example.socialimpact.ui.layouts.EditProfileLayout
 import com.example.socialimpact.ui.layouts.HomeLayout
+import com.example.socialimpact.ui.theme.AppTheme
 import com.example.socialimpact.ui.theme.SocialimpactTheme
 import com.example.socialimpact.ui.viewmodel.AuthViewModel
 import com.example.socialimpact.ui.viewmodel.AuthViewModelFactory
@@ -52,12 +56,26 @@ class HomeActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            SocialimpactTheme {
+            var currentTheme by remember { mutableStateOf(AppTheme.SYSTEM) }
+
+            SocialimpactTheme(appTheme = currentTheme) {
                 HomeNavigation(
                     authFactory = authViewModelFactory,
                     editProfileFactory = editProfileViewModelFactory,
                     isFromSignupExtra = isFromSignup,
-                    onLogoutTriggered = { navigateToLogin() }
+                    currentTheme = currentTheme,
+                    onThemeChange = { currentTheme = it },
+                    onLogoutTriggered = { navigateToLogin() },
+                    onProfileClick = {
+                        val intent = Intent(this, ProfileActivity::class.java).apply {
+                            putExtra("myprofile", true)
+                        }
+                        startActivity(intent)
+                    },
+                    onUploadClick = {
+                        val intent = Intent(this, UploadActivity::class.java)
+                        startActivity(intent)
+                    }
                 )
             }
         }
@@ -86,7 +104,11 @@ fun HomeNavigation(
     authFactory: ViewModelProvider.Factory,
     editProfileFactory: ViewModelProvider.Factory,
     isFromSignupExtra: Boolean,
-    onLogoutTriggered: () -> Unit
+    currentTheme: AppTheme,
+    onThemeChange: (AppTheme) -> Unit,
+    onLogoutTriggered: () -> Unit,
+    onProfileClick: () -> Unit,
+    onUploadClick: () -> Unit
 ) {
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
@@ -106,7 +128,10 @@ fun HomeNavigation(
                 },
                 onEditProfile = {
                     navController.navigate("edit_profile/false")
-                }
+                },
+                onProfileClick = onProfileClick,
+                currentTheme = currentTheme,
+                onThemeChange = onThemeChange
             )
         }
         composable("edit_profile") {

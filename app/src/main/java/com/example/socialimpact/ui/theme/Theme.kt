@@ -11,6 +11,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
+enum class AppTheme {
+    LIGHT, DARK, SYSTEM
+}
+
 private val DarkColorScheme = darkColorScheme(
     primary = teallight300,
     secondary = black,
@@ -18,7 +22,7 @@ private val DarkColorScheme = darkColorScheme(
     onPrimary = black,
     onSecondary = Color.LightGray,
     onBackground = White,
-    )
+)
 
 private val LightColorScheme = lightColorScheme(
     primary = tealdark800,
@@ -27,16 +31,20 @@ private val LightColorScheme = lightColorScheme(
     onPrimary = White,
     onSecondary = Color.DarkGray,
     onBackground = black,
-
 )
 
 @Composable
 fun SocialimpactTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
+    appTheme: AppTheme = AppTheme.SYSTEM,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (appTheme) {
+        AppTheme.LIGHT -> false
+        AppTheme.DARK -> true
+        AppTheme.SYSTEM -> isSystemInDarkTheme()
+    }
+
     val colorScheme = when {
         /*dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

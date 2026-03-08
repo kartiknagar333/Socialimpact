@@ -28,6 +28,16 @@
             android:exported="false"
             android:theme="@style/Theme.Socialimpact" />
 
+        <activity
+            android:name=".ui.activity.ProfileActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Socialimpact" />
+
+        <activity
+            android:name=".ui.activity.UploadActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Socialimpact" />
+
     </application>
 
 </manifest>
