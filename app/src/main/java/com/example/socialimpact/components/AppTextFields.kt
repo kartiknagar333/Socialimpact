@@ -24,6 +24,7 @@ fun PrimaryTextField(
     modifier: Modifier = Modifier,
     leadingIcon: ImageVector? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
+    prefix: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
     supportingText: String? = null,
     visualTransformation: VisualTransformation = VisualTransformation.None,
@@ -41,6 +42,7 @@ fun PrimaryTextField(
             { Icon(imageVector = it, contentDescription = null) }
         },
         trailingIcon = trailingIcon,
+        prefix = prefix,
         isError = isError,
         supportingText = supportingText?.let {
             { Text(text = it) }
