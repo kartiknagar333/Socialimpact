@@ -82,32 +82,41 @@ fun PrimaryTextField(
         )
     )
 }
-
 @Composable
 fun PrimaryNumberField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier,  // fillMaxWidth as default
     leadingIcon: ImageVector? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     prefix: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
     supportingText: String? = null,
     enabled: Boolean = true,
-    placeholder: String? = null,  // add this
+    placeholder: String? = null,
     readOnly: Boolean = false
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChange,
+        onValueChange = { input ->
+            val filtered = input
+                .filter { it.isDigit() || it == '.' }
+                .let { value ->
+                    val dotIndex = value.indexOf('.')
+                    if (dotIndex != -1)
+                        value.substring(0, dotIndex + 1) + value.substring(dotIndex + 1).replace(".", "")
+                    else value
+                }
+            if (filtered.length <= 10) onValueChange(filtered)
+        },
         label = { Text(label) },
         modifier = modifier.fillMaxWidth(),
         leadingIcon = leadingIcon?.let {
             { Icon(imageVector = it, contentDescription = null) }
         },
         placeholder = placeholder?.let {
-            { Text(text = it) }  // add this
+            { Text(text = it) }
         },
         trailingIcon = trailingIcon,
         prefix = prefix,

@@ -331,6 +331,9 @@ private fun NeedRow(item: NeedItem, onNameChange: (String) -> Unit, onUnitChange
                 value = item.name,
                 onValueChange = onNameChange,
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next
+                ),
                 placeholder = { Text("Item") },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
@@ -364,11 +367,14 @@ private fun NeedRow(item: NeedItem, onNameChange: (String) -> Unit, onUnitChange
                         modifier = Modifier.fillMaxWidth()
                     )
                 },
-                onValueChange = onQuantityChange,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number,
                     imeAction = ImeAction.Next
                 ),
+                onValueChange = { input ->
+                    val filtered = input.filter { it.isDigit() || it == '.' }
+                    onQuantityChange(filtered)
+                },
                 singleLine = true,
                 modifier = Modifier.width(70.dp),
                 colors = TextFieldDefaults.colors(
