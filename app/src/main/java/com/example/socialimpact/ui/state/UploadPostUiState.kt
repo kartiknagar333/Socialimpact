@@ -1,6 +1,6 @@
 package com.example.socialimpact.ui.state
 
-import com.example.socialimpact.ui.layouts.NeedItem
+import com.example.socialimpact.domain.model.NeedItem
 
 data class UploadPostUiState(
     val title: String = "",

@@ -16,7 +16,8 @@ import javax.inject.Singleton
         AnalyticsModule::class,
         FirebaseModule::class,
         AuthModule::class,
-        HomeModule::class
+        HomeModule::class,
+        PostModule::class
     ]
 )
 interface AppComponent {

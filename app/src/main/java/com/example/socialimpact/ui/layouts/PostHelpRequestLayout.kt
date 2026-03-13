@@ -1,7 +1,6 @@
 package com.example.socialimpact.ui.layouts
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -27,11 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.socialimpact.components.PrimaryNumberField
 import com.example.socialimpact.components.PrimaryTextField
+import com.example.socialimpact.domain.model.NeedItem
 import com.example.socialimpact.ui.state.UploadPostUiState
 import java.text.SimpleDateFormat
 import java.util.*
-
-data class NeedItem(val name: String = "", val unit: String = "Pcs", val quantity: String = "")
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -136,7 +134,7 @@ fun PostHelpRequestLayout(
                     }
                 },
                 scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.largeTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                     scrolledContainerColor = MaterialTheme.colorScheme.surface
                 )
@@ -178,7 +176,7 @@ fun PostHelpRequestLayout(
             if (uiState.selectedNeeds.contains("Fund")) {
                 PrimaryNumberField(
                     value = uiState.fundAmount,
-                    onValueChange = onFundAmountChange,
+                    onValueChange = { onFundAmountChange(it) },
                     label = "How Much Fund You Need",
                     prefix = { Text("Rs. ", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) }
                 )

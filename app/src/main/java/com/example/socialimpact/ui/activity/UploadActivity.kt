@@ -1,9 +1,11 @@
 package com.example.socialimpact.ui.activity
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -34,6 +36,19 @@ class UploadActivity : ComponentActivity() {
                 val viewModel: UploadViewModel = viewModel(factory = uploadViewModelFactory)
                 val uiState by viewModel.uiState.collectAsState()
 
+                LaunchedEffect(uiState.isSuccess) {
+                    if (uiState.isSuccess) {
+                        Toast.makeText(this@UploadActivity, "Post Created Successfully!", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+                }
+
+                LaunchedEffect(uiState.error) {
+                    uiState.error?.let {
+                        Toast.makeText(this@UploadActivity, it, Toast.LENGTH_LONG).show()
+                    }
+                }
+
                 PostHelpRequestLayout(
                     uiState = uiState,
                     onTitleChange = viewModel::onTitleChange,
@@ -42,13 +57,15 @@ class UploadActivity : ComponentActivity() {
                     onAddressChange = viewModel::onAddressChange,
                     onStartDateChange = viewModel::onStartDateChange,
                     onEndDateChange = viewModel::onEndDateChange,
-                    onToggleNeed = viewModel::toggleNeed,           // not onToggleNeed
-                    onToggleCategory = viewModel::toggleCategory,   // not onToggleCategory
-                    onAddDynamicNeed = viewModel::addDynamicNeed,   // not onAddDynamicNeed
+                    onToggleNeed = viewModel::toggleNeed,
+                    onToggleCategory = viewModel::toggleCategory,
+                    onAddDynamicNeed = viewModel::addDynamicNeed,
                     onRemoveDynamicNeed = viewModel::removeDynamicNeed,
                     onUpdateDynamicNeed = viewModel::updateDynamicNeed,
                     onBack = { finish() },
-                    onDone = { /* TODO: add onDone() to ViewModel */ }
+                    onDone = { 
+                        viewModel.uploadPost()
+                    }
                 )
             }
         }
