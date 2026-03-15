@@ -5,4 +5,5 @@ import kotlinx.coroutines.flow.Flow
 
 interface PostRepository {
     fun uploadHelpRequest(post: HelpRequestPost): Flow<Result<Unit>>
+    fun getUserPosts(userId: String): Flow<Result<List<HelpRequestPost>>>
 }

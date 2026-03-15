@@ -28,6 +28,8 @@ interface AppComponent {
     
     fun uploadActivityComponent(): UploadActivityComponent.Factory
 
+    fun profileActivityComponent(): ProfileActivityComponent.Factory
+
     @Component.Builder
     interface Builder {
         fun appModule(module: AppModule): Builder

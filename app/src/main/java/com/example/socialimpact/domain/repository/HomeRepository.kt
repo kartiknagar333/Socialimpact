@@ -4,6 +4,7 @@ import com.example.socialimpact.ui.layouts.ProfileType
 import kotlinx.coroutines.flow.Flow
 
 data class LocalProfile(
+    val uid: String,
     val type: ProfileType,
     val fullName: String,
     val organizationName: String,
@@ -17,6 +18,7 @@ data class LocalProfile(
 
 interface HomeRepository {
     fun saveProfile(
+        uid: String,
         type: ProfileType,
         fullName: String,
         organizationName: String,
@@ -29,7 +31,6 @@ interface HomeRepository {
     ): Flow<Result<Unit>>
 
     fun updateProfile(
-        uid: String,
         profileData: Map<String, Any>
     ): Flow<Result<Unit>>
 

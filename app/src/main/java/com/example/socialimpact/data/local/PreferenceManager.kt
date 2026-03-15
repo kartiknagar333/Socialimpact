@@ -12,6 +12,7 @@ class PreferenceManager @Inject constructor(
     private val sharedPreferences: SharedPreferences
 ) {
     companion object {
+        const val KEY_USER_ID = "user_id"
         const val KEY_USER_TYPE = "user_type"
         const val KEY_FULL_NAME = "full_name"
         const val KEY_ORG_NAME = "org_name"
@@ -24,6 +25,7 @@ class PreferenceManager @Inject constructor(
     }
 
     fun saveProfileLocally(
+        uid: String?,
         type: String?,
         fullName: String?,
         orgName: String?,
@@ -35,6 +37,7 @@ class PreferenceManager @Inject constructor(
         bio: String?
     ) {
         sharedPreferences.edit {
+            putString(KEY_USER_ID, uid)
             putString(KEY_USER_TYPE, type)
             putString(KEY_FULL_NAME, fullName)
             putString(KEY_ORG_NAME, orgName)
@@ -49,6 +52,7 @@ class PreferenceManager @Inject constructor(
 
     fun updateLocalProfile(updates: Map<String, Any>) {
         sharedPreferences.edit {
+            updates["uid"]?.let { putString(KEY_USER_ID, it as String) }
             updates["type"]?.let { putString(KEY_USER_TYPE, it as String) }
             updates["fullName"]?.let { putString(KEY_FULL_NAME, it as String) }
             updates["organizationName"]?.let { putString(KEY_ORG_NAME, it as String) }
@@ -66,6 +70,7 @@ class PreferenceManager @Inject constructor(
         val type = try { ProfileType.valueOf(typeStr) } catch (e: Exception) { return null }
         
         return LocalProfile(
+            uid = sharedPreferences.getString(KEY_USER_ID, "") ?: "",
             type = type,
             fullName = sharedPreferences.getString(KEY_FULL_NAME, "") ?: "",
             organizationName = sharedPreferences.getString(KEY_ORG_NAME, "") ?: "",

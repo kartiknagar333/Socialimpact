@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 class EditProfileViewModel @Inject constructor(
@@ -44,7 +45,7 @@ class EditProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             homeRepository.saveProfile(
-                type, fullName, organizationName, registrationId,
+                firebaseAuth.currentUser?.uid.toString() ,type, fullName, organizationName, registrationId,
                 website, industry, phone, location, bio
             ).collect { result ->
                 result.fold(
@@ -83,8 +84,7 @@ class EditProfileViewModel @Inject constructor(
                 "website" to website,
                 "industry" to industry
             )
-            val uid = firebaseAuth.currentUser?.uid ?: ""
-            homeRepository.updateProfile(uid, profileData).collect { result ->
+            homeRepository.updateProfile(profileData).collect { result ->
                 result.fold(
                     onSuccess = {
                         _uiState.update { it.copy(isLoading = false, isSuccess = true) }

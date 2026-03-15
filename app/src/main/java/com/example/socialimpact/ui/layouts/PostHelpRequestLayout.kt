@@ -395,7 +395,8 @@ private fun NeedRow(item: NeedItem, onNameChange: (String) -> Unit, onUnitChange
 
 @Composable
 private fun DateBox(value: String, placeholder: String, onClick: () -> Unit) {
-    OutlinedCard(onClick = onClick, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+    OutlinedCard(onClick = onClick,  shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth(),
+        ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.DateRange, null)
             Spacer(Modifier.width(12.dp))
