@@ -1,6 +1,8 @@
 package com.example.socialimpact.ui.layouts
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.*
@@ -44,15 +46,18 @@ fun MyImpactTab(posts: List<HelpRequestPost>) {
             }
         }
     } else {
-        // Using a Column within the parent's scrollable container
+        // Since the pager now has fillParentMaxSize, we need internal scrolling
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             posts.forEach { post ->
                 PostCard(post = post)
             }
+            // Extra spacer for better scrolling experience
+            Spacer(modifier = Modifier.height(80.dp))
         }
     }
 }

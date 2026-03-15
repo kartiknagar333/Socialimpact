@@ -3,6 +3,7 @@ package com.example.socialimpact.ui.layouts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,9 +20,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -32,7 +39,7 @@ import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.domain.repository.LocalProfile
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ProfileLayout(
     profile: LocalProfile?,
@@ -42,11 +49,52 @@ fun ProfileLayout(
     onUploadClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val density = LocalDensity.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val scrollState = rememberScrollState()
     
+    // Manual state to track collapsing header height
+    var measuredHeaderHeightPx by remember { mutableFloatStateOf(0f) }
+    var headerOffsetHeightPx by remember { mutableFloatStateOf(0f) }
+
+    // NestedScrollConnection to coordinate header collapse and list scrolling
+    val nestedScrollConnection = remember(measuredHeaderHeightPx) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (measuredHeaderHeightPx <= 0f) return Offset.Zero
+                
+                val delta = available.y
+                if (delta < 0) { // Scrolling up (finger moving up)
+                    val oldOffset = headerOffsetHeightPx
+                    // Decrease header height until it reaches 0
+                    headerOffsetHeightPx = (headerOffsetHeightPx + delta).coerceIn(-measuredHeaderHeightPx, 0f)
+                    val consumed = headerOffsetHeightPx - oldOffset
+                    return Offset(0f, consumed)
+                }
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (measuredHeaderHeightPx <= 0f) return Offset.Zero
+                
+                val delta = available.y
+                if (delta > 0) { // Scrolling down (finger moving down)
+                    val oldOffset = headerOffsetHeightPx
+                    // Expand header height until it reaches its original size
+                    headerOffsetHeightPx = (headerOffsetHeightPx + delta).coerceIn(-measuredHeaderHeightPx, 0f)
+                    val consumedNow = headerOffsetHeightPx - oldOffset
+                    return Offset(0f, consumedNow)
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
     val showCollapsedInfo by remember {
-        derivedStateOf { scrollState.value > 200 }
+        derivedStateOf { 
+            if (measuredHeaderHeightPx > 0) {
+                headerOffsetHeightPx < -measuredHeaderHeightPx * 0.5f 
+            } else false
+        }
     }
 
     val tabs = listOf("About", "My Impact", "Impacted By")
@@ -56,7 +104,7 @@ fun ProfileLayout(
     Scaffold(
         modifier = modifier
             .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
+            .nestedScroll(nestedScrollConnection),
         topBar = {
             TopAppBar(
                 scrollBehavior = scrollBehavior,
@@ -139,17 +187,37 @@ fun ProfileLayout(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .verticalScroll(scrollState)
             ) {
-                ProfileHeader(profile = profile)
+                // 1. Collapsing Header
+                val headerModifier = if (measuredHeaderHeightPx <= 0f) {
+                    Modifier.wrapContentHeight()
+                } else {
+                    Modifier.height(with(density) { (measuredHeaderHeightPx + headerOffsetHeightPx).toDp().coerceAtLeast(0.dp) })
+                }
 
-                // Using SecondaryScrollableTabRow to allow wrap_content behavior
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(headerModifier)
+                        .clipToBounds()
+                ) {
+                    // This internal Box measures the content height only once
+                    Box(modifier = Modifier.onGloballyPositioned { 
+                        if (measuredHeaderHeightPx <= 0f) {
+                            measuredHeaderHeightPx = it.size.height.toFloat()
+                        }
+                    }) {
+                        ProfileHeader(profile = profile)
+                    }
+                }
+
+                // 2. Tab Layout (Always below header, effectively sticks when header height is 0)
                 SecondaryScrollableTabRow(
                     selectedTabIndex = pagerState.currentPage,
                     containerColor = MaterialTheme.colorScheme.surface,
                     edgePadding = 16.dp, 
                     divider = {},
-                    indicator = {} // Removed default line indicator
+                    indicator = {}
                 ) {
                     tabs.forEachIndexed { index, title ->
                         val selected = pagerState.currentPage == index
@@ -161,7 +229,7 @@ fun ProfileLayout(
                                 }
                             },
                             modifier = Modifier
-                                .padding(horizontal = 4.dp) // Margin between tabs
+                                .padding(horizontal = 4.dp, vertical = 8.dp)
                                 .clip(CircleShape)
                                 .background(
                                     if (selected) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
@@ -173,19 +241,19 @@ fun ProfileLayout(
                                     color = if (selected) MaterialTheme.colorScheme.tertiary else Color.Gray,
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                                    modifier = Modifier.padding(horizontal = 8.dp) // Internal padding for wrap_content
+                                    modifier = Modifier.padding(horizontal = 8.dp)
                                 )
                             }
                         )
                     }
                 }
 
-                // Swipeable Tab content
+                // 3. Pager Content (Fills remaining screen space)
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 600.dp),
+                        .weight(1f),
                     verticalAlignment = Alignment.Top
                 ) { page ->
                     when (page) {
@@ -194,9 +262,6 @@ fun ProfileLayout(
                         2 -> ImpactedByTab()
                     }
                 }
-                
-                // Add some bottom padding to ensure we can scroll past header
-                Spacer(modifier = Modifier.height(50.dp))
             }
         }
     }
@@ -223,7 +288,6 @@ fun ProfileHeader(profile: LocalProfile) {
                         }
                         uriHandler.openUri(url)
                     } catch (e: Exception) {
-                        // Handle potential error
                     }
                 }) {
                     Text("Open")
@@ -320,6 +384,7 @@ fun ProfileAboutTab(profile: LocalProfile) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
     ) {
         Spacer(modifier = Modifier.height(24.dp))
@@ -359,7 +424,7 @@ fun ProfileAboutTab(profile: LocalProfile) {
             InfoRow(icon = Icons.Default.Category, label = "Industry", value = profile.industry)
         }
 
-        Spacer(modifier = Modifier.height(50.dp))
+        Spacer(modifier = Modifier.height(80.dp))
     }
 }
 
@@ -375,6 +440,7 @@ fun InfoRow(icon: ImageVector, label: String, value: String) {
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(20.dp),
+            // Changed icon color to tertiary
             tint = MaterialTheme.colorScheme.outline
         )
         Spacer(modifier = Modifier.width(16.dp))

@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,13 +42,13 @@ fun PostCard(
             ) {
                 Surface(
                     modifier = Modifier.size(40.dp).clip(CircleShape),
-                    color = MaterialTheme.colorScheme.primaryContainer
+                    color = MaterialTheme.colorScheme.tertiary.copy(0.2f)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
                         modifier = Modifier.padding(8.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        tint = MaterialTheme.colorScheme.tertiary
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
@@ -55,7 +56,7 @@ fun PostCard(
                     Text(
                         text = post.userName.ifEmpty { "Anonymous" },
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = post.userType,
@@ -70,13 +71,13 @@ fun PostCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Content: Title and Description
             Text(
                 text = post.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -92,9 +93,9 @@ fun PostCard(
                 Spacer(modifier = Modifier.height(12.dp))
                 InfoTag(
                     icon = Icons.Default.Payments,
-                    text = "Goal: ${post.fundAmount}",
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                    text = "Goal : ${post.fundAmount} $",
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = Color.Black
                 )
             }
 
@@ -111,6 +112,7 @@ fun PostCard(
                     )
                 }
             }
+
             if (post.address.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 DetailItem(
@@ -126,10 +128,12 @@ fun PostCard(
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     allTags.forEach { tag ->
                         SuggestionChip(
+                            modifier = Modifier
+                                .height(30.dp),
                             onClick = { },
                             label = { Text(tag, style = MaterialTheme.typography.labelMedium) }
                         )
@@ -139,13 +143,12 @@ fun PostCard(
 
             // Dynamic Needs List
             if (post.dynamicNeeds.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Specific Requirements:",
+                    text = "Specific Requirements",
                     style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                 )
                 post.dynamicNeeds.forEach { item ->
                     Row(
@@ -161,7 +164,7 @@ fun PostCard(
                         Text(
                             text = "${item.quantity} ${item.unit}",
                             style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
