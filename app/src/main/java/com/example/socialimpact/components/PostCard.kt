@@ -84,7 +84,7 @@ fun SharedTransitionScope.PostCard(
             Text(
                 text = post.title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.sharedElement(
                     rememberSharedContentState(key = "title-${post.id}"),
