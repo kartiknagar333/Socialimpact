@@ -1,7 +1,7 @@
 package com.example.socialimpact.ui.layouts
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
@@ -13,11 +13,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ImpactedByTab() {
+fun ImpactedByTab(scrollState: ScrollState) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {

@@ -1,5 +1,9 @@
 package com.example.socialimpact.components
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -18,16 +22,19 @@ import com.example.socialimpact.domain.model.HelpRequestPost
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun PostCard(
+fun SharedTransitionScope.PostCard(
     post: HelpRequestPost,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .clickable { onClick() },
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -78,14 +85,22 @@ fun PostCard(
                 text = post.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.sharedElement(
+                    rememberSharedContentState(key = "title-${post.id}"),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = post.description,
                 style = MaterialTheme.typography.bodyMedium,
                 lineHeight = 20.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.sharedElement(
+                    rememberSharedContentState(key = "desc-${post.id}"),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
             )
 
             // Details: Fund Amount (if present)
@@ -135,8 +150,7 @@ fun PostCard(
                             modifier = Modifier
                                 .height(30.dp),
                             onClick = { },
-                            label = { Text(tag, style = MaterialTheme.typography.labelMedium) }
-                        )
+                            label = { Text(tag, style = MaterialTheme.typography.labelMedium) } )
                     }
                 }
             }

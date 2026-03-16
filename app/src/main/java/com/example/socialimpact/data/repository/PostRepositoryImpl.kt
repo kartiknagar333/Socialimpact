@@ -36,19 +36,18 @@ class PostRepositoryImpl @Inject constructor(
     override fun getUserPosts(userId: String): Flow<Result<List<HelpRequestPost>>> = flow {
         try {
             Log.d(TAG, "getUserPosts: Fetching posts for userId: $userId")
-            // Note: To avoid requiring a composite index in Firestore, we perform sorting locally.
-            // If the number of posts per user grows very large, you can revert to server-side sorting
-            // by adding .orderBy("timestamp", Query.Direction.DESCENDING) and clicking the link in 
-            // the error message to create the required index.
+            
             val snapshot = firestore.collection("posts")
                 .whereEqualTo("userId", userId)
                 .get()
                 .await()
             
+            Log.d(TAG, "getUserPosts: Query returned ${snapshot.size()} documents for userId: $userId")
+            
             val posts = snapshot.toObjects(HelpRequestPost::class.java)
                 .sortedByDescending { it.timestamp }
-
-            Log.d(TAG, "getUserPosts: Successfully fetched ${posts.size} posts for userId: $userId")
+                
+            Log.d(TAG, "getUserPosts: Successfully mapped ${posts.size} posts for userId: $userId")
             emit(Result.success(posts))
         } catch (e: Exception) {
             Log.e(TAG, "getUserPosts: Error fetching posts for userId: $userId", e)

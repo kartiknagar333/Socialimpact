@@ -1,7 +1,10 @@
 package com.example.socialimpact.ui.layouts
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.VolunteerActivism
@@ -14,8 +17,15 @@ import androidx.compose.ui.unit.dp
 import com.example.socialimpact.components.PostCard
 import com.example.socialimpact.domain.model.HelpRequestPost
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun MyImpactTab(posts: List<HelpRequestPost>) {
+fun MyImpactTab(
+    posts: List<HelpRequestPost>,
+    onPostClick: (HelpRequestPost) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    scrollState: ScrollState
+) {
     if (posts.isEmpty()) {
         Box(
             modifier = Modifier
@@ -46,17 +56,21 @@ fun MyImpactTab(posts: List<HelpRequestPost>) {
             }
         }
     } else {
-        // Since the pager now has fillParentMaxSize, we need internal scrolling
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             posts.forEach { post ->
-                PostCard(post = post)
+                with(sharedTransitionScope) {
+                    PostCard(
+                        post = post,
+                        animatedVisibilityScope = animatedVisibilityScope,
+                        onClick = { onPostClick(post) }
+                    )
+                }
             }
-            // Extra spacer for better scrolling experience
             Spacer(modifier = Modifier.height(80.dp))
         }
     }

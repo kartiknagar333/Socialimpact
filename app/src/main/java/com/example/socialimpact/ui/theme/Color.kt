@@ -14,4 +14,3 @@ val White = Color(0xFFFFFFFF)
 
 val tealdark800 = Color(0xFF1DE9B6)
 val tealdark400 = Color(0xFF00BFA5)
-
