@@ -224,7 +224,7 @@ fun MainProfileContent(
                     }
                 }
 
-                SecondaryScrollableTabRow(selectedTabIndex = pagerState.currentPage, containerColor = MaterialTheme.colorScheme.surface, edgePadding = 16.dp, divider = {}, indicator = {}) {
+                SecondaryScrollableTabRow(selectedTabIndex = pagerState.currentPage, containerColor = MaterialTheme.colorScheme.surface, edgePadding = 4.dp, divider = {}, indicator = {}) {
                     tabs.forEachIndexed { index, title ->
                         val selected = pagerState.currentPage == index
                         Tab(selected = selected, onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } }, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp).clip(CircleShape).background(if (selected) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f) else Color.Transparent), text = { Text(text = title, color = if (selected) MaterialTheme.colorScheme.tertiary else Color.Gray, style = MaterialTheme.typography.titleSmall, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.padding(horizontal = 8.dp)) })

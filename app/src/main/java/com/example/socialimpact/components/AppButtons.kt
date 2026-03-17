@@ -1,5 +1,6 @@
 package com.example.socialimpact.components
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -15,8 +16,9 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun PrimaryButton(
     text: String,
+    enabled: Boolean = true,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onClick,
@@ -26,6 +28,7 @@ fun PrimaryButton(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = Color.Black
         ),
+        enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
             .height(55.dp)

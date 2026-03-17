@@ -25,6 +25,7 @@ import com.example.socialimpact.ui.theme.AppTheme
 fun HomeLayout(
     onLogout: () -> Unit,
     onEditProfile: () -> Unit,
+    onPaymentClick: () -> Unit,
     onProfileClick: () -> Unit,
     currentTheme: AppTheme,
     onThemeChange: (AppTheme) -> Unit,
@@ -76,6 +77,7 @@ fun HomeLayout(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false },
                             onEditProfile = onEditProfile,
+                            onPaymentClick = onPaymentClick,
                             onLogoutClick = { showLogoutDialog = true },
                             currentTheme = currentTheme,
                             onThemeChange = onThemeChange

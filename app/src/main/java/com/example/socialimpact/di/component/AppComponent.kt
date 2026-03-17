@@ -30,6 +30,8 @@ interface AppComponent {
 
     fun profileActivityComponent(): ProfileActivityComponent.Factory
 
+    fun paymentActivityComponent(): PaymentActivityComponent.Factory
+
     @Component.Builder
     interface Builder {
         fun appModule(module: AppModule): Builder

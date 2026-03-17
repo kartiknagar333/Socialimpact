@@ -75,6 +75,10 @@ class HomeActivity : ComponentActivity() {
                     onUploadClick = {
                         val intent = Intent(this, UploadActivity::class.java)
                         startActivity(intent)
+                    },
+                    onPaymentClick = {
+                        val intent = Intent(this, PaymentActivity::class.java)
+                        startActivity(intent)
                     }
                 )
             }
@@ -108,7 +112,8 @@ fun HomeNavigation(
     onThemeChange: (AppTheme) -> Unit,
     onLogoutTriggered: () -> Unit,
     onProfileClick: () -> Unit,
-    onUploadClick: () -> Unit
+    onUploadClick: () -> Unit,
+    onPaymentClick: () -> Unit
 ) {
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
@@ -129,6 +134,7 @@ fun HomeNavigation(
                 onEditProfile = {
                     navController.navigate("edit_profile/false")
                 },
+                onPaymentClick = onPaymentClick,
                 onProfileClick = onProfileClick,
                 currentTheme = currentTheme,
                 onThemeChange = onThemeChange

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +27,7 @@ fun ProfileDropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     onEditProfile: () -> Unit,
+    onPaymentClick: () -> Unit,
     onLogoutClick: () -> Unit,
     currentTheme: AppTheme,
     onThemeChange: (AppTheme) -> Unit
@@ -59,6 +61,30 @@ fun ProfileDropdownMenu(
                 leadingIcon = {
                     Icon(
                         Icons.Default.Edit,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+            )
+
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = "Payment",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                },
+                onClick = {
+                    onDismissRequest()
+                    onPaymentClick()
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Payments,
                         tint = MaterialTheme.colorScheme.tertiary,
                         contentDescription = null,
                         modifier = Modifier.size(24.dp)

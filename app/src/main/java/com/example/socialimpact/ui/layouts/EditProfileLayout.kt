@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.socialimpact.components.PrimaryNumberField
 import com.example.socialimpact.components.PrimaryTextField
 import com.example.socialimpact.ui.state.EditProfileUiState
 import kotlinx.coroutines.launch
@@ -244,7 +245,7 @@ fun EditProfileLayout(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            PrimaryTextField(
+            PrimaryNumberField(
                 value = phone,
                 onValueChange = { phone = it },
                 label = "Phone Number",

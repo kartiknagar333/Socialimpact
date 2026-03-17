@@ -1,9 +1,6 @@
 package com.example.socialimpact.di.module
 
-import com.example.socialimpact.di.component.HomeActivityComponent
-import com.example.socialimpact.di.component.MainActivityComponent
-import com.example.socialimpact.di.component.ProfileActivityComponent
-import com.example.socialimpact.di.component.UploadActivityComponent
+import com.example.socialimpact.di.component.*
 import dagger.Module
 
 /**
@@ -13,6 +10,7 @@ import dagger.Module
     MainActivityComponent::class,
     HomeActivityComponent::class,
     UploadActivityComponent::class,
-    ProfileActivityComponent::class
+    ProfileActivityComponent::class,
+    PaymentActivityComponent::class
 ])
 class SubcomponentModule
