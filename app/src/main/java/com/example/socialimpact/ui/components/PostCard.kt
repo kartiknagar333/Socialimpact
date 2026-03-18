@@ -1,4 +1,4 @@
-package com.example.socialimpact.components
+package com.example.socialimpact.ui.components
 
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -191,8 +191,8 @@ fun SharedTransitionScope.PostCard(
 private fun InfoTag(
     icon: ImageVector,
     text: String,
-    containerColor: androidx.compose.ui.graphics.Color,
-    contentColor: androidx.compose.ui.graphics.Color
+    containerColor: Color,
+    contentColor: Color
 ) {
     Surface(
         shape = CircleShape,

@@ -27,10 +27,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.socialimpact.R
-import com.example.socialimpact.components.GlassyAuthBackground
-import com.example.socialimpact.components.LightButton
-import com.example.socialimpact.components.PrimaryButton
-import com.example.socialimpact.components.PrimaryTextField
+import com.example.socialimpact.ui.components.GlassyAuthBackground
+import com.example.socialimpact.ui.components.LightButton
+import com.example.socialimpact.ui.components.PrimaryButton
+import com.example.socialimpact.ui.components.PrimaryTextField
 import com.example.socialimpact.ui.state.SignupUiState
 import com.example.socialimpact.ui.theme.SocialimpactTheme
 import com.example.socialimpact.ui.viewmodel.AuthViewModel

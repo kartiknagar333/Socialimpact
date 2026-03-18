@@ -24,8 +24,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.socialimpact.components.PrimaryNumberField
-import com.example.socialimpact.components.PrimaryTextField
+import com.example.socialimpact.ui.components.PrimaryNumberField
+import com.example.socialimpact.ui.components.PrimaryTextField
 import com.example.socialimpact.domain.model.NeedItem
 import com.example.socialimpact.ui.state.UploadPostUiState
 import java.text.SimpleDateFormat

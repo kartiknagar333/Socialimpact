@@ -1,4 +1,4 @@
-package com.example.socialimpact.components
+package com.example.socialimpact.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape

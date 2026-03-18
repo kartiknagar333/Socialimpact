@@ -16,8 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.socialimpact.R
-import com.example.socialimpact.components.LogoutConfirmationDialog
-import com.example.socialimpact.components.ProfileDropdownMenu
+import com.example.socialimpact.ui.components.LogoutConfirmationDialog
+import com.example.socialimpact.ui.components.ProfileDropdownMenu
 import com.example.socialimpact.ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)

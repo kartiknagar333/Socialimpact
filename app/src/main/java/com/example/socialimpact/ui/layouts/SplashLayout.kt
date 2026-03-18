@@ -22,9 +22,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.socialimpact.R
-import com.example.socialimpact.components.AppItem
-import com.example.socialimpact.components.GlassyAuthBackground
-import com.example.socialimpact.components.PrimaryButton
+import com.example.socialimpact.ui.components.AppItem
+import com.example.socialimpact.ui.components.GlassyAuthBackground
+import com.example.socialimpact.ui.components.PrimaryButton
 
 @Composable
 fun SplashLayout(

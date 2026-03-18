@@ -1,4 +1,4 @@
-package com.example.socialimpact.components
+package com.example.socialimpact.ui.components
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*

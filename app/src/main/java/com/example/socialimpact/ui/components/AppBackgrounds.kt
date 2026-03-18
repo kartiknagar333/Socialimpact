@@ -1,4 +1,4 @@
-package com.example.socialimpact.components
+package com.example.socialimpact.ui.components
 
 import android.os.Build
 import androidx.compose.animation.core.*
