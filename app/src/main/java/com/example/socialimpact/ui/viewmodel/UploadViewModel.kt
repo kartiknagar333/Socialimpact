@@ -107,8 +107,8 @@ class UploadViewModel @Inject constructor(
             
             val uid = firebaseAuth.currentUser?.uid ?: ""
             val profile = homeRepository.getLocalProfile()
-            val userName = if (profile?.type == ProfileType.PERSON) profile.fullName else profile?.organizationName ?: "Anonymous"
-            
+            val userName = profile?.fullName ?: ""
+
             val post = HelpRequestPost(
                 userId = uid,
                 userName = userName,

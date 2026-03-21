@@ -55,7 +55,6 @@ class ProfileViewModel @Inject constructor(
                     fetchProfileFromFirestore(effectiveUid)
                 }
                 
-                Log.d(TAG, "loadProfileData: Profile loaded: ${profile?.fullName ?: profile?.organizationName}")
                 _uiState.update { it.copy(profile = profile) }
 
                 // Fetch posts for this UID
@@ -89,7 +88,6 @@ class ProfileViewModel @Inject constructor(
                     uid = uid,
                     type = ProfileType.valueOf(data["type"] as String),
                     fullName = data["fullName"] as? String ?: "",
-                    organizationName = data["organizationName"] as? String ?: "",
                     registrationId = data["registrationId"] as? String ?: "",
                     website = data["website"] as? String ?: "",
                     industry = data["industry"] as? String ?: "",

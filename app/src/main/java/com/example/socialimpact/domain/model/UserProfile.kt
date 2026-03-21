@@ -8,13 +8,14 @@ sealed class UserProfile {
     abstract val phone: String
     abstract val location: String
     abstract val bio: String
+    abstract val fullName: String
 
     data class Person(
         override val uid: String,
         override val phone: String,
         override val location: String,
         override val bio: String,
-        val fullName: String,
+        override val fullName: String,
         override val type: ProfileType = ProfileType.PERSON
     ) : UserProfile()
 
@@ -23,7 +24,7 @@ sealed class UserProfile {
         override val phone: String,
         override val location: String,
         override val bio: String,
-        val organizationName: String,
+        override val fullName: String,
         val registrationId: String,
         val website: String,
         override val type: ProfileType = ProfileType.NGO
@@ -34,7 +35,7 @@ sealed class UserProfile {
         override val phone: String,
         override val location: String,
         override val bio: String,
-        val organizationName: String,
+        override val fullName: String,
         val registrationId: String,
         val website: String,
         val industry: String,
@@ -53,6 +54,11 @@ sealed class UserProfile {
             val phone = profileData["phone"] as? String ?: ""
             val location = profileData["location"] as? String ?: ""
             val bio = profileData["bio"] as? String ?: ""
+            
+            // Map either field to fullName for backward compatibility
+            val name = (profileData["fullName"] as? String) 
+                ?: (profileData["organizationName"] as? String) 
+                ?: ""
 
             return when (type) {
                 ProfileType.PERSON -> Person(
@@ -60,14 +66,14 @@ sealed class UserProfile {
                     phone = phone,
                     location = location,
                     bio = bio,
-                    fullName = profileData["fullName"] as? String ?: ""
+                    fullName = name
                 )
                 ProfileType.NGO -> Ngo(
                     uid = uid,
                     phone = phone,
                     location = location,
                     bio = bio,
-                    organizationName = profileData["organizationName"] as? String ?: "",
+                    fullName = name,
                     registrationId = profileData["registrationId"] as? String ?: "",
                     website = profileData["website"] as? String ?: ""
                 )
@@ -76,7 +82,7 @@ sealed class UserProfile {
                     phone = phone,
                     location = location,
                     bio = bio,
-                    organizationName = profileData["organizationName"] as? String ?: "",
+                    fullName = name,
                     registrationId = profileData["registrationId"] as? String ?: "",
                     website = profileData["website"] as? String ?: "",
                     industry = profileData["industry"] as? String ?: ""

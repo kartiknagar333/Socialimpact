@@ -1,5 +1,7 @@
 package com.example.socialimpact.domain.repository
 
+import androidx.paging.PagingData
+import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.ui.layouts.ProfileType
 import kotlinx.coroutines.flow.Flow
 
@@ -7,7 +9,6 @@ data class LocalProfile(
     val uid: String,
     val type: ProfileType,
     val fullName: String,
-    val organizationName: String,
     val registrationId: String,
     val website: String,
     val industry: String,
@@ -21,7 +22,6 @@ interface HomeRepository {
         uid: String,
         type: ProfileType,
         fullName: String,
-        organizationName: String,
         registrationId: String,
         website: String,
         industry: String,
@@ -37,4 +37,6 @@ interface HomeRepository {
     fun getLocalProfile(): LocalProfile?
     
     fun isProfileSet(): Boolean
+
+    fun getHomePosts(): Flow<PagingData<HelpRequestPost>>
 }

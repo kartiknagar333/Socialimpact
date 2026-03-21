@@ -40,7 +40,7 @@ fun MyImpactTab(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
                 Icon(
-                    imageVector = Icons.Defam,
+                    imageVector = Icons.Default.VolunteerActivism,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
                     tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)

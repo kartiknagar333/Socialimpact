@@ -189,7 +189,7 @@ fun MainProfileContent(
                                     Spacer(modifier = Modifier.width(12.dp))
                                 }
                             }
-                            val displayName = if (profile.type == ProfileType.PERSON) profile.fullName else profile.organizationName
+                            val displayName = profile.fullName
                             Text(text = if (showCollapsedInfo) displayName else (if (isMyProfile) "My Profile" else "Profile"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     } else {
@@ -255,7 +255,7 @@ fun ProfileHeader(profile: LocalProfile) {
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f), modifier = Modifier.size(100.dp)) { Icon(imageVector = profileIcon, contentDescription = "Profile Picture", modifier = Modifier.fillMaxSize().padding(20.dp), tint = MaterialTheme.colorScheme.tertiary) }
         Spacer(modifier = Modifier.height(16.dp))
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f), modifier = Modifier.padding(bottom = 8.dp) ) { Text(text = profile.type.name, modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface) }
-        val displayName = if (profile.type == ProfileType.PERSON) profile.fullName else profile.organizationName
+        val displayName = profile.fullName
         Text(text = displayName.ifBlank { "No Name Provided" }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         if (profile.website.isNotBlank()) {
             Spacer(modifier = Modifier.height(8.dp))

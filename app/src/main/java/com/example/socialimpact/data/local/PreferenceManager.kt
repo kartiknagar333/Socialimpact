@@ -15,7 +15,6 @@ class PreferenceManager @Inject constructor(
         const val KEY_USER_ID = "user_id"
         const val KEY_USER_TYPE = "user_type"
         const val KEY_FULL_NAME = "full_name"
-        const val KEY_ORG_NAME = "org_name"
         const val KEY_REG_ID = "reg_id"
         const val KEY_WEBSITE = "website"
         const val KEY_INDUSTRY = "industry"
@@ -28,7 +27,6 @@ class PreferenceManager @Inject constructor(
         uid: String?,
         type: String?,
         fullName: String?,
-        orgName: String?,
         regId: String?,
         website: String?,
         industry: String?,
@@ -40,7 +38,6 @@ class PreferenceManager @Inject constructor(
             putString(KEY_USER_ID, uid)
             putString(KEY_USER_TYPE, type)
             putString(KEY_FULL_NAME, fullName)
-            putString(KEY_ORG_NAME, orgName)
             putString(KEY_REG_ID, regId)
             putString(KEY_WEBSITE, website)
             putString(KEY_INDUSTRY, industry)
@@ -54,8 +51,10 @@ class PreferenceManager @Inject constructor(
         sharedPreferences.edit {
             updates["uid"]?.let { putString(KEY_USER_ID, it as String) }
             updates["type"]?.let { putString(KEY_USER_TYPE, it as String) }
-            updates["fullName"]?.let { putString(KEY_FULL_NAME, it as String) }
-            updates["organizationName"]?.let { putString(KEY_ORG_NAME, it as String) }
+            // Map organizationName to fullName if provided during transition
+            val name = updates["fullName"] as? String ?: updates["organizationName"] as? String
+            name?.let { putString(KEY_FULL_NAME, it) }
+            
             updates["registrationId"]?.let { putString(KEY_REG_ID, it as String) }
             updates["website"]?.let { putString(KEY_WEBSITE, it as String) }
             updates["industry"]?.let { putString(KEY_INDUSTRY, it as String) }
@@ -73,7 +72,6 @@ class PreferenceManager @Inject constructor(
             uid = sharedPreferences.getString(KEY_USER_ID, "") ?: "",
             type = type,
             fullName = sharedPreferences.getString(KEY_FULL_NAME, "") ?: "",
-            organizationName = sharedPreferences.getString(KEY_ORG_NAME, "") ?: "",
             registrationId = sharedPreferences.getString(KEY_REG_ID, "") ?: "",
             website = sharedPreferences.getString(KEY_WEBSITE, "") ?: "",
             industry = sharedPreferences.getString(KEY_INDUSTRY, "") ?: "",

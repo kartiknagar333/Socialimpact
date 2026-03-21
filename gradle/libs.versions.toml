@@ -17,6 +17,7 @@ dagger = "2.59.2"
 coroutines = "1.10.2"
 firebaseFunctions = "22.1.0"
 browser = "1.9.0"
+paging = "3.4.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -48,6 +49,8 @@ dagger-compiler = { group = "com.google.dagger", name = "dagger-compiler", versi
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
 firebase-functions = { group = "com.google.firebase", name = "firebase-functions", version.ref = "firebaseFunctions" }
 androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
+androidx-paging-runtime = { group = "androidx.paging", name = "paging-runtime-ktx", version.ref = "paging" }
+androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

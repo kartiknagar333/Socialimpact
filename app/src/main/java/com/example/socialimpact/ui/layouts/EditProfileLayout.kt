@@ -56,7 +56,6 @@ fun EditProfileLayout(
             bio = profile.bio
             location = profile.location
             fullName = profile.fullName
-            organizationName = profile.organizationName
             registrationId = profile.registrationId
             website = profile.website
             industry = profile.industry

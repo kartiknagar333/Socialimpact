@@ -1,7 +1,11 @@
 package com.example.socialimpact.data.repository
 
 import android.util.Log
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 import com.example.socialimpact.data.local.PreferenceManager
+import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.domain.model.UserProfile
 import com.example.socialimpact.domain.repository.HomeRepository
 import com.example.socialimpact.domain.repository.LocalProfile
@@ -33,7 +37,6 @@ class HomeRepositoryImpl @Inject constructor(
         uid: String,
         type: ProfileType,
         fullName: String,
-        organizationName: String,
         registrationId: String,
         website: String,
         industry: String,
@@ -44,32 +47,26 @@ class HomeRepositoryImpl @Inject constructor(
         try {
             Log.d(TAG, "saveProfile: Starting for UID $uid")
             
-            if (type == ProfileType.PERSON && fullName.isBlank()) throw Exception("Full Name is mandatory")
-            if ((type == ProfileType.NGO || type == ProfileType.CORPORATION) && organizationName.isBlank()) {
-                val label = if (type == ProfileType.NGO) "NGO Name" else "Company Name"
-                throw Exception("$label is mandatory")
-            }
+            if (fullName.isBlank()) throw Exception("Full Name is mandatory")
 
             val profileData = mutableMapOf<String, Any>(
                 "type" to type.name,
                 "phone" to phone,
                 "location" to location,
                 "bio" to bio,
-                "uid" to uid
+                "uid" to uid,
+                "fullName" to fullName
             )
 
             when (type) {
-                ProfileType.PERSON -> {
-                    profileData["fullName"] = fullName
-                }
                 ProfileType.NGO, ProfileType.CORPORATION -> {
-                    profileData["organizationName"] = organizationName
                     profileData["registrationId"] = registrationId
                     profileData["website"] = website
                     if (type == ProfileType.CORPORATION) {
                         profileData["industry"] = industry
                     }
                 }
+                else -> {}
             }
 
             val currentTime = System.currentTimeMillis()
@@ -82,8 +79,7 @@ class HomeRepositoryImpl @Inject constructor(
             Log.d(TAG, "saveProfile: Account document created")
 
             // 2. Handle type-specific path with last updated
-            val name = if (type == ProfileType.PERSON) fullName else organizationName
-            val specificPath = getSpecificPath(type.name.lowercase(), name, uid)
+            val specificPath = getSpecificPath(type.name.lowercase(), fullName, uid)
             Log.d(TAG, "saveProfile: Specific path: $specificPath")
 
 
@@ -98,7 +94,6 @@ class HomeRepositoryImpl @Inject constructor(
                 uid = uid,
                 type = type.name,
                 fullName = fullName,
-                orgName = organizationName,
                 regId = registrationId,
                 website = website,
                 industry = industry,
@@ -125,7 +120,7 @@ class HomeRepositoryImpl @Inject constructor(
             // Get old state before update
             val oldProfile = getLocalProfile() ?: throw Exception("Profile not found locally")
             val uid = oldProfile.uid
-            val oldName = if (oldProfile.type == ProfileType.PERSON) oldProfile.fullName else oldProfile.organizationName
+            val oldName = oldProfile.fullName
             val oldSpecificPath = getSpecificPath(oldProfile.type.name.lowercase(), oldName, uid)
 
             // 1. Update main account document
@@ -137,11 +132,7 @@ class HomeRepositoryImpl @Inject constructor(
             // 3. Get new state to calculate new path
             val updatedProfile = getLocalProfile()!!
             val newTypeName = (profileData["type"] as? String ?: updatedProfile.type.name).lowercase()
-            val newName = if (newTypeName == "person") {
-                profileData["fullName"] as? String ?: updatedProfile.fullName
-            } else {
-                profileData["organizationName"] as? String ?: updatedProfile.organizationName
-            }
+            val newName = profileData["fullName"] as? String ?: updatedProfile.fullName
             val newSpecificPath = getSpecificPath(newTypeName, newName, uid)
 
             val obj = UserProfile.fromMap(uid, profileData)
@@ -176,5 +167,16 @@ class HomeRepositoryImpl @Inject constructor(
 
     override fun isProfileSet(): Boolean {
         return preferenceManager.isProfileSet()
+    }
+
+    override fun getHomePosts(): Flow<PagingData<HelpRequestPost>> {
+        val currentUserId = firebaseAuth.currentUser?.uid ?: ""
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false
+            ),
+            pagingSourceFactory = { HomePagingSource(firestore, currentUserId) }
+        ).flow
     }
 }

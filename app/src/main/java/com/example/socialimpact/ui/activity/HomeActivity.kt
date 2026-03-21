@@ -6,6 +6,8 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +33,8 @@ import com.example.socialimpact.ui.viewmodel.AuthViewModel
 import com.example.socialimpact.ui.viewmodel.AuthViewModelFactory
 import com.example.socialimpact.ui.viewmodel.EditProfileViewModel
 import com.example.socialimpact.ui.viewmodel.EditProfileViewModelFactory
+import com.example.socialimpact.ui.viewmodel.HomeViewModel
+import com.example.socialimpact.ui.viewmodel.HomeViewModelFactory
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -41,6 +45,9 @@ class HomeActivity : ComponentActivity() {
 
     @Inject
     lateinit var editProfileViewModelFactory: EditProfileViewModelFactory
+    
+    @Inject
+    lateinit var homeViewModelFactory: HomeViewModelFactory
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +69,7 @@ class HomeActivity : ComponentActivity() {
                 HomeNavigation(
                     authFactory = authViewModelFactory,
                     editProfileFactory = editProfileViewModelFactory,
+                    homeFactory = homeViewModelFactory,
                     isFromSignupExtra = isFromSignup,
                     currentTheme = currentTheme,
                     onThemeChange = { currentTheme = it },
@@ -103,10 +111,12 @@ class HomeActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeNavigation(
     authFactory: ViewModelProvider.Factory,
     editProfileFactory: ViewModelProvider.Factory,
+    homeFactory: ViewModelProvider.Factory,
     isFromSignupExtra: Boolean,
     currentTheme: AppTheme,
     onThemeChange: (AppTheme) -> Unit,
@@ -118,34 +128,40 @@ fun HomeNavigation(
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
     val authViewModel: AuthViewModel = viewModel(factory = authFactory)
+    val homeViewModel: HomeViewModel = viewModel(factory = homeFactory)
 
-    NavHost(
-        navController = navController, 
-        startDestination = if (isFromSignupExtra) "edit_profile" else "home"
-    ) {
-        composable("home") {
-            HomeLayout(
-                onLogout = {
-                    coroutineScope.launch {
-                        authViewModel.logout()
-                        onLogoutTriggered()
-                    }
-                },
-                onEditProfile = {
-                    navController.navigate("edit_profile/false")
-                },
-                onPaymentClick = onPaymentClick,
-                onProfileClick = onProfileClick,
-                currentTheme = currentTheme,
-                onThemeChange = onThemeChange
-            )
-        }
-        composable("edit_profile") {
-            EditProfileScreen(editProfileFactory, navController, isFromSignupExtra)
-        }
-        composable("edit_profile/{isFromSignup}") { backStackEntry ->
-            val isFromSignup = backStackEntry.arguments?.getString("isFromSignup")?.toBoolean() ?: false
-            EditProfileScreen(editProfileFactory, navController, isFromSignup)
+    SharedTransitionLayout {
+        NavHost(
+            navController = navController, 
+            startDestination = if (isFromSignupExtra) "edit_profile" else "home"
+        ) {
+            composable("home") {
+                HomeLayout(
+                    viewModel = homeViewModel,
+                    onLogout = {
+                        coroutineScope.launch {
+                            authViewModel.logout()
+                            onLogoutTriggered()
+                        }
+                    },
+                    onEditProfile = {
+                        navController.navigate("edit_profile/false")
+                    },
+                    onPaymentClick = onPaymentClick,
+                    onProfileClick = onProfileClick,
+                    currentTheme = currentTheme,
+                    onThemeChange = onThemeChange,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@composable
+                )
+            }
+            composable("edit_profile") {
+                EditProfileScreen(editProfileFactory, navController, isFromSignupExtra)
+            }
+            composable("edit_profile/{isFromSignup}") { backStackEntry ->
+                val isFromSignup = backStackEntry.arguments?.getString("isFromSignup")?.toBoolean() ?: false
+                EditProfileScreen(editProfileFactory, navController, isFromSignup)
+            }
         }
     }
 }
@@ -174,11 +190,11 @@ fun EditProfileScreen(
         onSave = { type, fullName, orgName, regId, web, ind, ph, loc, bio ->
             if (isFromSignup) {
                 editProfileViewModel.saveProfile(
-                    type, fullName, orgName, regId, web, ind, ph, loc, bio
+                    type, fullName, regId, web, ind, ph, loc, bio
                 )
             } else {
                 editProfileViewModel.updateProfile(
-                    type, fullName, orgName, regId, web, ind, ph, loc, bio
+                    type, fullName, regId, web, ind, ph, loc, bio
                 )
             }
         }
