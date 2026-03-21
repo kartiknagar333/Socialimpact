@@ -68,9 +68,13 @@ dependencies {
 
     // Dagger 2
     implementation(libs.dagger)
+    implementation(libs.firebase.functions)
     kapt(libs.dagger.compiler)
     // Coroutines Tasks
     implementation(libs.kotlinx.coroutines.play.services)
+
+    // Browser (for Custom Tabs)
+    implementation(libs.androidx.browser)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

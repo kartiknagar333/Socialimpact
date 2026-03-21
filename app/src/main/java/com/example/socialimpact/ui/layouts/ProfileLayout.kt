@@ -59,7 +59,7 @@ fun ProfileLayout(
     }
 
     // Preserve scroll states outside AnimatedContent
-    val tabs = listOf("About", "My Impact", "Impacted By")
+    val tabs = listOf("About", "Request", "Donation")
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val aboutScrollState = rememberScrollState()
     val impactScrollState = rememberScrollState()

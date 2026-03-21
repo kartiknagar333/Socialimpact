@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.socialimpact.domain.model.HelpRequestPost
+import com.example.socialimpact.ui.layouts.ProfileType
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -42,6 +43,12 @@ fun SharedTransitionScope.PostCard(
                 .padding(16.dp)
                 .fillMaxWidth()
         ) {
+            val profileIcon: ImageVector = when (post.userType.lowercase()) {
+                "person" -> Icons.Default.Person
+                "ngo" -> Icons.Default.Groups
+                "corporation" -> Icons.Default.Business
+                else -> Icons.Default.Person // fallback icon
+            }
             // Header: User Info and Timestamp
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -51,8 +58,9 @@ fun SharedTransitionScope.PostCard(
                     modifier = Modifier.size(40.dp).clip(CircleShape),
                     color = MaterialTheme.colorScheme.tertiary.copy(0.2f)
                 ) {
+
                     Icon(
-                        imageVector = Icons.Default.Person,
+                        imageVector = profileIcon,
                         contentDescription = null,
                         modifier = Modifier.padding(8.dp),
                         tint = MaterialTheme.colorScheme.tertiary
