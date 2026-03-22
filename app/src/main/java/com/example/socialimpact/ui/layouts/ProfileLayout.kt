@@ -254,7 +254,7 @@ fun ProfileHeader(profile: LocalProfile) {
         val profileIcon: ImageVector = when (profile.type) { ProfileType.PERSON -> Icons.Default.Person; ProfileType.NGO -> Icons.Default.Groups; ProfileType.CORPORATION -> Icons.Default.Business }
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f), modifier = Modifier.size(100.dp)) { Icon(imageVector = profileIcon, contentDescription = "Profile Picture", modifier = Modifier.fillMaxSize().padding(20.dp), tint = MaterialTheme.colorScheme.tertiary) }
         Spacer(modifier = Modifier.height(16.dp))
-        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f), modifier = Modifier.padding(bottom = 8.dp) ) { Text(text = profile.type.name, modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface) }
+        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f), modifier = Modifier.padding(bottom = 8.dp) ) { Text(text = profile.type.name, modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground) }
         val displayName = profile.fullName
         Text(text = displayName.ifBlank { "No Name Provided" }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         if (profile.website.isNotBlank()) {
@@ -268,7 +268,7 @@ fun ProfileHeader(profile: LocalProfile) {
 fun ProfileAboutTab(profile: LocalProfile, scrollState: ScrollState) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 24.dp)) {
         Spacer(modifier = Modifier.height(24.dp))
-        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) { Column(modifier = Modifier.padding(16.dp)) { Text(text = if (profile.type == ProfileType.PERSON) "Bio" else "Our Mission", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary); Spacer(modifier = Modifier.height(8.dp)); Text(text = profile.bio.ifBlank { "No mission or bio shared yet." }, style = MaterialTheme.typography.bodyMedium) } }
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f))) { Column(modifier = Modifier.padding(16.dp)) { Text(text = if (profile.type == ProfileType.PERSON) "Bio" else "Our Mission", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary); Spacer(modifier = Modifier.height(8.dp)); Text(text = profile.bio.ifBlank { "No mission or bio shared yet." }, style = MaterialTheme.typography.bodyMedium) } }
         Spacer(modifier = Modifier.height(24.dp))
         if (profile.location.isNotBlank()) InfoRow(icon = Icons.Default.LocationOn, label = "Location", value = profile.location)
         if (profile.phone.isNotBlank()) InfoRow(icon = Icons.Default.Phone, label = "Phone", value = profile.phone)

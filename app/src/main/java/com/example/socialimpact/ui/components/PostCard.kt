@@ -19,7 +19,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.socialimpact.domain.model.HelpRequestPost
-import com.example.socialimpact.ui.layouts.ProfileType
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -111,19 +110,110 @@ fun SharedTransitionScope.PostCard(
                 )
             )
 
-            // Details: Fund Amount (if present)
+            // Details: Fund Amount & Progress
             if (post.fundAmount.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                InfoTag(
-                    icon = Icons.Default.Payments,
-                    text = "Goal : ${post.fundAmount} $",
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.Black
+                Spacer(modifier = Modifier.height(16.dp))
+                val fundProgress = try {
+                    val goal = post.fundAmount.toFloat()
+                    val received = post.fundReceived.toFloat()
+                    if (goal > 0) received / goal else 0f
+                } catch (e: Exception) { 0f }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Payments, 
+                                    contentDescription = null, 
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.tertiary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Funding",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Text(
+                                text = "${post.fundReceived} / ${post.fundAmount} $",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { fundProgress.coerceIn(0f, 1f) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(CircleShape),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
+                    }
+                }
+            }
+
+            // Dynamic Needs List with Progress
+            if (post.dynamicNeeds.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Special Requirements",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
+                
+                post.dynamicNeeds.forEach { item ->
+                    val itemProgress = try {
+                        val goal = item.quantity.toFloat()
+                        val received = item.received.toFloat()
+                        if (goal > 0) received / goal else 0f
+                    } catch (e: Exception) { 0f }
+
+                    Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = item.name,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "${item.received} / ${item.quantity} ${item.unit}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LinearProgressIndicator(
+                            progress = { itemProgress.coerceIn(0f, 1f) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(CircleShape),
+                            color = MaterialTheme.colorScheme.tertiary,
+                            trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                        )
+                    }
+                }
             }
 
             // Details: Dates and Location
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -155,65 +245,13 @@ fun SharedTransitionScope.PostCard(
                 ) {
                     allTags.forEach { tag ->
                         SuggestionChip(
-                            modifier = Modifier
-                                .height(30.dp),
+                            modifier = Modifier.height(28.dp),
                             onClick = { },
-                            label = { Text(tag, style = MaterialTheme.typography.labelMedium) } )
-                    }
-                }
-            }
-
-            // Dynamic Needs List
-            if (post.dynamicNeeds.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Specific Requirements",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                )
-                post.dynamicNeeds.forEach { item ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "• ${item.name}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = "${item.quantity} ${item.unit}",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold
+                            label = { Text(tag, style = MaterialTheme.typography.labelSmall) } 
                         )
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun InfoTag(
-    icon: ImageVector,
-    text: String,
-    containerColor: Color,
-    contentColor: Color
-) {
-    Surface(
-        shape = CircleShape,
-        color = containerColor,
-        contentColor = contentColor
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(text = text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -224,10 +262,10 @@ private fun DetailItem(icon: ImageVector, text: String) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(14.dp),
             tint = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall,

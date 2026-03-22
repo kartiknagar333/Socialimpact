@@ -110,18 +110,32 @@ fun SharedTransitionScope.PostDetailLayout(
 
             if (post.fundAmount.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(24.dp))
+                val fundProgress = try {
+                    val goal = post.fundAmount.toFloat()
+                    val received = post.fundReceived.toFloat()
+                    if (goal > 0) received / goal else 0f
+                } catch (e: Exception) { 0f }
+
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f))
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f))
                 ) {
-                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Payments, contentDescription = null)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text("Funding Goal", style = MaterialTheme.typography.labelSmall)
-                            Text(post.fundAmount, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Payments, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Funding", style = MaterialTheme.typography.labelSmall)
+                                Text("${post.fundReceived} / ${post.fundAmount} $", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            }
                         }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LinearProgressIndicator(
+                            progress = { fundProgress.coerceIn(0f, 1f) },
+                            modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
                     }
                 }
             }
@@ -131,41 +145,53 @@ fun SharedTransitionScope.PostDetailLayout(
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(
                     text = "Special Requirements",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.outline,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 post.dynamicNeeds.forEach { item ->
+                    val needProgress = try {
+                        val goal = item.quantity.toFloat()
+                        val received = item.received.toFloat()
+                        if (goal > 0) received / goal else 0f
+                    } catch (e: Exception) { 0f }
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp),
+                            .padding(vertical = 6.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
+                            containerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f)
                         )
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = item.name,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f)
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "${item.quantity} ${item.unit}",
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                    text = item.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "${item.received} / ${item.quantity} ${item.unit}",
                                     style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    fontWeight = FontWeight.Bold
+
                                 )
                             }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = { needProgress.coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                                color = MaterialTheme.colorScheme.tertiary,
+                                trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                            )
                         }
                     }
                 }
@@ -180,7 +206,8 @@ fun SharedTransitionScope.PostDetailLayout(
             val allTags = post.selectedCategories + post.selectedNeeds
             if (allTags.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(24.dp))
-                Text("Categories & Needs", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text("Categories & Needs", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(12.dp))
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -188,7 +215,8 @@ fun SharedTransitionScope.PostDetailLayout(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     allTags.forEach { tag ->
-                        SuggestionChip(onClick = {}, label = { Text(tag) })
+                        SuggestionChip(onClick = {}, label = { Text(tag,
+                            color = MaterialTheme.colorScheme.onBackground) })
                     }
                 }
             }
@@ -197,8 +225,6 @@ fun SharedTransitionScope.PostDetailLayout(
         }
     }
 }
-
-
 
 @Composable
 private fun DetailSection(icon: ImageVector, label: String, value: String) {

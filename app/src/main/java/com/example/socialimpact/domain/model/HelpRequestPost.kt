@@ -3,7 +3,8 @@ package com.example.socialimpact.domain.model
 data class NeedItem(
     val name: String = "",
     val unit: String = "Pcs",
-    val quantity: String = ""
+    val quantity: String = "",
+    val received: String = "0"
 )
 
 data class HelpRequestPost(
@@ -16,6 +17,7 @@ data class HelpRequestPost(
     val selectedNeeds: List<String> = emptyList(),
     val selectedCategories: List<String> = emptyList(),
     val fundAmount: String = "",
+    val fundReceived: String = "0",
     val dynamicNeeds: List<NeedItem> = emptyList(),
     val startDate: String = "",
     val endDate: String = "",
