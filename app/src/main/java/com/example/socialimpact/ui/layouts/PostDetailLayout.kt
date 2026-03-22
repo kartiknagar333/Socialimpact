@@ -248,7 +248,7 @@ fun SharedTransitionScope.PostDetailLayout(
                 sheetState = sheetState,
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                 dragHandle = { BottomSheetDefaults.DragHandle() },
-                containerColor = MaterialTheme.colorScheme.tertiary
+                containerColor = MaterialTheme.colorScheme.tertiary// Changed background color here
             ) {
                 DonationSheetContent(
                     post = post,
@@ -264,6 +264,8 @@ fun DonationSheetContent(
     post: HelpRequestPost,
     onClose: () -> Unit
 ) {
+    // State to track selection: null = nothing, "fund" = fund, NeedItem = specific need
+    // Modified to select the first available option by default
     var selection by remember { 
         mutableStateOf<Any?>(
             if (post.fundAmount.isNotEmpty()) "fund" else post.dynamicNeeds.firstOrNull()
@@ -278,6 +280,15 @@ fun DonationSheetContent(
             .padding(bottom = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Icon(
+            imageVector = Icons.Default.Favorite,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = Color.White
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+
         Text(
             text = "Make a Donation",
             style = MaterialTheme.typography.headlineSmall,
@@ -287,6 +298,7 @@ fun DonationSheetContent(
         
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Horizontal Chip Row for Selection
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -297,6 +309,7 @@ fun DonationSheetContent(
                 labelColor = Color.White
             )
 
+            // Fund Chip (if applicable)
             if (post.fundAmount.isNotEmpty()) {
                 FilterChip(
                     selected = selection == "fund",
@@ -319,6 +332,7 @@ fun DonationSheetContent(
                 )
             }
 
+            // Dynamic Needs Chips
             post.dynamicNeeds.forEach { item ->
                 FilterChip(
                     selected = selection == item,
@@ -344,10 +358,11 @@ fun DonationSheetContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Conditional UI based on selection
         when (val selected = selection) {
             "fund" -> {
                 Text(
-                    text = "Money goes through Stripe securely to ensure direct impact.",
+                    text = "Financial contributions are processed securely through Stripe to ensure safe and direct delivery. Your support makes a real difference.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White,
                     textAlign = TextAlign.Center,
@@ -376,7 +391,7 @@ fun DonationSheetContent(
             }
             is NeedItem -> {
                 Text(
-                    text = "Donation will be counted when they receive meanwhile it will be under pending status.",
+                    text = "Physical donations will be officially recorded once received. Your contribution remains in 'Pending' status until confirmation by the recipient.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White,
                     textAlign = TextAlign.Center,
