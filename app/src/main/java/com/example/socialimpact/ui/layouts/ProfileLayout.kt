@@ -205,7 +205,7 @@ fun MainProfileContent(
         },
         floatingActionButton = {
             if (isMyProfile) {
-                FloatingActionButton(onClick = onUploadClick, containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
+                FloatingActionButton(onClick = onUploadClick, containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.Black) {
                     Icon(Icons.Default.Add, contentDescription = "Create Post")
                 }
             }
@@ -254,7 +254,7 @@ fun ProfileHeader(profile: LocalProfile) {
         val profileIcon: ImageVector = when (profile.type) { ProfileType.PERSON -> Icons.Default.Person; ProfileType.NGO -> Icons.Default.Groups; ProfileType.CORPORATION -> Icons.Default.Business }
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f), modifier = Modifier.size(100.dp)) { Icon(imageVector = profileIcon, contentDescription = "Profile Picture", modifier = Modifier.fillMaxSize().padding(20.dp), tint = MaterialTheme.colorScheme.tertiary) }
         Spacer(modifier = Modifier.height(16.dp))
-        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.05f), modifier = Modifier.padding(bottom = 8.dp) ) { Text(text = profile.type.name, modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground) }
+        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.09f), modifier = Modifier.padding(bottom = 8.dp) ) { Text(text = profile.type.name, modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground) }
         val displayName = profile.fullName
         Text(text = displayName.ifBlank { "No Name Provided" }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         if (profile.website.isNotBlank()) {

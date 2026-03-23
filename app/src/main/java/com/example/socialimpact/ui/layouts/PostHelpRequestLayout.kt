@@ -246,7 +246,8 @@ fun PostHelpRequestLayout(
                 value = uiState.address,
                 onValueChange = onAddressChange,
                 label = "Full Address",
-                leadingIcon = Icons.Default.LocationOn
+                leadingIcon = Icons.Default.LocationOn,
+                supportingText = "Where do you want to receive your requested items or support? Please provide a clear and reachable address."
             )
 
             Spacer(modifier = Modifier.height(32.dp))

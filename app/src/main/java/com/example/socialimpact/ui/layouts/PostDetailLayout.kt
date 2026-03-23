@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.domain.model.NeedItem
+import com.example.socialimpact.ui.components.GlassyAuthBackground
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -35,7 +36,8 @@ fun SharedTransitionScope.PostDetailLayout(
     onBack: () -> Unit
 ) {
     var showSheet by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
+    // skipPartiallyExpanded = true ensures the sheet opens to fit its content immediately
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     Scaffold(
         topBar = {
@@ -247,13 +249,25 @@ fun SharedTransitionScope.PostDetailLayout(
                 onDismissRequest = { showSheet = false },
                 sheetState = sheetState,
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                dragHandle = { BottomSheetDefaults.DragHandle() },
-                containerColor = MaterialTheme.colorScheme.tertiary// Changed background color here
+                dragHandle = null, // Disable default handle
+                containerColor = Color.Black, // Solid black base
+                tonalElevation = 0.dp
             ) {
-                DonationSheetContent(
-                    post = post,
-                    onClose = { showSheet = false }
-                )
+                // Glassy background now covers the entire sheet content
+                GlassyAuthBackground(
+                    modifier = Modifier.wrapContentHeight(),
+                    backgroundColor = Color.Transparent
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // Manual DragHandle inside the glassy area
+                        BottomSheetDefaults.DragHandle(color = Color.White)
+                        
+                        DonationSheetContent(
+                            post = post,
+                            onClose = { showSheet = false }
+                        )
+                    }
+                }
             }
         }
     }
@@ -264,8 +278,7 @@ fun DonationSheetContent(
     post: HelpRequestPost,
     onClose: () -> Unit
 ) {
-    // State to track selection: null = nothing, "fund" = fund, NeedItem = specific need
-    // Modified to select the first available option by default
+    // Default selection logic: select first available option
     var selection by remember { 
         mutableStateOf<Any?>(
             if (post.fundAmount.isNotEmpty()) "fund" else post.dynamicNeeds.firstOrNull()
@@ -298,18 +311,17 @@ fun DonationSheetContent(
         
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Horizontal Chip Row for Selection
+        // Horizontal Chip Row
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             val chipColors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = Color.White,
+                selectedContainerColor = Color.White.copy(0.9f),
                 selectedLabelColor = MaterialTheme.colorScheme.tertiary,
-                labelColor = Color.White
+                labelColor = Color.White.copy(0.5f),
             )
 
-            // Fund Chip (if applicable)
             if (post.fundAmount.isNotEmpty()) {
                 FilterChip(
                     selected = selection == "fund",
@@ -326,13 +338,12 @@ fun DonationSheetContent(
                     border = FilterChipDefaults.filterChipBorder(
                         enabled = true,
                         selected = selection == "fund",
-                        borderColor = Color.White,
-                        selectedBorderColor = Color.White
+                        borderColor = Color.White.copy(0.5f),
+                        selectedBorderColor = Color.White,
                     )
                 )
             }
 
-            // Dynamic Needs Chips
             post.dynamicNeeds.forEach { item ->
                 FilterChip(
                     selected = selection == item,
@@ -349,20 +360,18 @@ fun DonationSheetContent(
                     border = FilterChipDefaults.filterChipBorder(
                         enabled = true,
                         selected = selection == item,
-                        borderColor = Color.White,
-                        selectedBorderColor = Color.White
-                    )
+                        borderColor = Color.White.copy(0.5f),
+                        selectedBorderColor = Color.White,                    )
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Conditional UI based on selection
         when (val selected = selection) {
             "fund" -> {
                 Text(
-                    text = "Financial contributions are processed securely through Stripe to ensure safe and direct delivery. Your support makes a real difference.",
+                    text = "Money goes through Stripe securely to ensure direct impact.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White,
                     textAlign = TextAlign.Center,
@@ -376,14 +385,14 @@ fun DonationSheetContent(
                     modifier = Modifier.fillMaxWidth().height(55.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Black,
-                        contentColor = MaterialTheme.colorScheme.primary
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.Black
                     )
                 ) {
                     Icon(
                         imageVector = Icons.Default.Payments, 
                         contentDescription = null, 
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = Color.Black
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Donate Now", fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -391,7 +400,7 @@ fun DonationSheetContent(
             }
             is NeedItem -> {
                 Text(
-                    text = "Physical donations will be officially recorded once received. Your contribution remains in 'Pending' status until confirmation by the recipient.",
+                    text = "Donation will be counted when they receive meanwhile it will be under pending status.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White,
                     textAlign = TextAlign.Center,
@@ -408,7 +417,7 @@ fun DonationSheetContent(
                         value = amountOrQuantity,
                         onValueChange = { amountOrQuantity = it },
                         label = { Text("Quantity", color = Color.White, fontWeight = FontWeight.SemiBold) },
-                        prefix = { Text("${selected.unit} ", fontWeight = FontWeight.Bold, color = Color.Black) },
+                        prefix = { Text("${selected.unit} ", fontWeight = FontWeight.Bold, color = Color.White) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                         textStyle = LocalTextStyle.current.copy(
@@ -434,14 +443,14 @@ fun DonationSheetContent(
                     modifier = Modifier.fillMaxWidth().height(55.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Black,
-                        contentColor = MaterialTheme.colorScheme.primary
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.Black
                     )
                 ) {
                     Icon(
                         imageVector = Icons.Default.Inventory, 
                         contentDescription = null, 
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = Color.Black
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Confirm Donation", fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -452,7 +461,7 @@ fun DonationSheetContent(
         Spacer(modifier = Modifier.height(16.dp))
         
         TextButton(onClick = onClose) {
-            Text("Cancel", color = Color.Black)
+            Text("Cancel", color = Color.White, fontWeight = FontWeight.SemiBold)
         }
     }
 }
