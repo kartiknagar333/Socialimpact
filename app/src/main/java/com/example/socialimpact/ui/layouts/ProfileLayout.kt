@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.socialimpact.domain.model.HelpRequestPost
+import com.example.socialimpact.domain.model.ProfileType
 import com.example.socialimpact.domain.repository.LocalProfile
 import kotlinx.coroutines.launch
 

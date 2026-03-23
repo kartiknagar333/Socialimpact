@@ -16,18 +16,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.socialimpact.domain.model.ProfileType
 import com.example.socialimpact.ui.components.PrimaryNumberField
 import com.example.socialimpact.ui.components.PrimaryTextField
 import com.example.socialimpact.ui.state.EditProfileUiState
 import kotlinx.coroutines.launch
 
-enum class ProfileType { PERSON, NGO, CORPORATION }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileLayout(
     onBack: () -> Unit,
-    onSave: (ProfileType, String, String, String, String, String, String, String, String) -> Unit,
+    onSave: (ProfileType, String, String, String, String, String, String, String) -> Unit,
     uiState: EditProfileUiState,
     modifier: Modifier = Modifier,
     isFromSignup: Boolean = false
@@ -35,13 +34,12 @@ fun EditProfileLayout(
     var profileType by remember { mutableStateOf(ProfileType.PERSON) }
     
     // Common fields
+    var fullName by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var bio by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
     
     // Type specific fields
-    var fullName by remember { mutableStateOf("") } // For Person
-    var organizationName by remember { mutableStateOf("") } // For NGO/Corp
     var registrationId by remember { mutableStateOf("") } // For NGO/Corp
     var website by remember { mutableStateOf("") } // For NGO/Corp
     var industry by remember { mutableStateOf("") } // For Corporation
@@ -52,10 +50,10 @@ fun EditProfileLayout(
     LaunchedEffect(uiState.initialProfile) {
         uiState.initialProfile?.let { profile ->
             profileType = profile.type
+            fullName = profile.fullName
             phone = profile.phone
             bio = profile.bio
             location = profile.location
-            fullName = profile.fullName
             registrationId = profile.registrationId
             website = profile.website
             industry = profile.industry
@@ -96,7 +94,7 @@ fun EditProfileLayout(
             ExtendedFloatingActionButton(
                 onClick = {
                     onSave(
-                        profileType, fullName, organizationName, registrationId,
+                        profileType, fullName, registrationId,
                         website, industry, phone, location, bio
                     )
                 },
@@ -198,51 +196,51 @@ fun EditProfileLayout(
                 }
             }
 
+            // Name Field (Universal)
+            PrimaryTextField(
+                value = fullName,
+                onValueChange = { fullName = it },
+                label = when (profileType) {
+                    ProfileType.PERSON -> "Full Name *"
+                    ProfileType.NGO -> "NGO Name *"
+                    ProfileType.CORPORATION -> "Company Name *"
+                },
+                leadingIcon = when (profileType) {
+                    ProfileType.PERSON -> Icons.Default.Person
+                    ProfileType.NGO -> Icons.Default.Groups
+                    ProfileType.CORPORATION -> Icons.Default.Business
+                }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Dynamic Fields based on Profile Type
-            when (profileType) {
-                ProfileType.PERSON -> {
-                    PrimaryTextField(
-                        value = fullName,
-                        onValueChange = { fullName = it },
-                        label = "Full Name *",
-                        leadingIcon = Icons.Default.Person
-                    )
-                }
-                ProfileType.NGO, ProfileType.CORPORATION -> {
-                    PrimaryTextField(
-                        value = organizationName,
-                        onValueChange = { organizationName = it },
-                        label = (if (profileType == ProfileType.NGO) "NGO Name" else "Company Name") + " *",
-                        leadingIcon = if (profileType == ProfileType.NGO) Icons.Default.Groups else Icons.Default.Business
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    PrimaryTextField(
-                        value = registrationId,
-                        onValueChange = { registrationId = it },
-                        label = "Registration / Tax ID",
-                        leadingIcon = Icons.Default.AppRegistration
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    PrimaryTextField(
-                        value = website,
-                        onValueChange = { website = it },
-                        label = "Website URL",
-                        leadingIcon = Icons.Default.Language
-                    )
-                }
+            if (profileType == ProfileType.NGO || profileType == ProfileType.CORPORATION) {
+                PrimaryTextField(
+                    value = registrationId,
+                    onValueChange = { registrationId = it },
+                    label = "Registration / Tax ID",
+                    leadingIcon = Icons.Default.AppRegistration
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                PrimaryTextField(
+                    value = website,
+                    onValueChange = { website = it },
+                    label = "Website URL",
+                    leadingIcon = Icons.Default.Language
+                )
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             if (profileType == ProfileType.CORPORATION) {
-                Spacer(modifier = Modifier.height(16.dp))
                 PrimaryTextField(
                     value = industry,
                     onValueChange = { industry = it },
                     label = "Industry",
                     leadingIcon = Icons.Default.Category
                 )
+                Spacer(modifier = Modifier.height(16.dp))
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             PrimaryNumberField(
                 value = phone,

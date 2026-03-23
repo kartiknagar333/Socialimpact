@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.domain.model.NeedItem
+import com.example.socialimpact.domain.model.ProfileType
 import com.example.socialimpact.domain.repository.HomeRepository
 import com.example.socialimpact.domain.repository.PostRepository
-import com.example.socialimpact.ui.layouts.ProfileType
 import com.example.socialimpact.ui.state.UploadPostUiState
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -118,6 +118,7 @@ class UploadViewModel @Inject constructor(
                 selectedNeeds = currentState.selectedNeeds,
                 selectedCategories = currentState.selectedCategories,
                 fundAmount = currentState.fundAmount,
+                fundReceived = "0",
                 dynamicNeeds = currentState.dynamicNeeds,
                 startDate = currentState.startDate,
                 endDate = currentState.endDate,

@@ -9,7 +9,7 @@ import com.example.socialimpact.ui.state.ProfileUiState
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.socialimpact.domain.repository.LocalProfile
-import com.example.socialimpact.ui.layouts.ProfileType
+import com.example.socialimpact.domain.model.ProfileType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update

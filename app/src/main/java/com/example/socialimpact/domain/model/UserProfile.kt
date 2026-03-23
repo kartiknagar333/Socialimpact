@@ -56,9 +56,7 @@ sealed class UserProfile {
             val bio = profileData["bio"] as? String ?: ""
             
             // Map either field to fullName for backward compatibility
-            val name = (profileData["fullName"] as? String) 
-                ?: (profileData["organizationName"] as? String) 
-                ?: ""
+            val name = (profileData["fullName"] as? String) ?: ""
 
             return when (type) {
                 ProfileType.PERSON -> Person(

@@ -2,7 +2,7 @@ package com.example.socialimpact.domain.repository
 
 import androidx.paging.PagingData
 import com.example.socialimpact.domain.model.HelpRequestPost
-import com.example.socialimpact.ui.layouts.ProfileType
+import com.example.socialimpact.domain.model.ProfileType
 import kotlinx.coroutines.flow.Flow
 
 data class LocalProfile(

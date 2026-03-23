@@ -3,13 +3,12 @@ package com.example.socialimpact.ui.activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,8 +24,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.socialimpact.di.component.SocialImpactApp
+import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.ui.layouts.EditProfileLayout
 import com.example.socialimpact.ui.layouts.HomeLayout
+import com.example.socialimpact.ui.layouts.PostDetailLayout
 import com.example.socialimpact.ui.theme.AppTheme
 import com.example.socialimpact.ui.theme.SocialimpactTheme
 import com.example.socialimpact.ui.viewmodel.AuthViewModel
@@ -136,24 +137,47 @@ fun HomeNavigation(
             startDestination = if (isFromSignupExtra) "edit_profile" else "home"
         ) {
             composable("home") {
-                HomeLayout(
-                    viewModel = homeViewModel,
-                    onLogout = {
-                        coroutineScope.launch {
-                            authViewModel.logout()
-                            onLogoutTriggered()
-                        }
-                    },
-                    onEditProfile = {
-                        navController.navigate("edit_profile/false")
-                    },
-                    onPaymentClick = onPaymentClick,
-                    onProfileClick = onProfileClick,
-                    currentTheme = currentTheme,
-                    onThemeChange = onThemeChange,
-                    sharedTransitionScope = this@SharedTransitionLayout,
-                    animatedVisibilityScope = this@composable
-                )
+                var selectedPost by remember { mutableStateOf<HelpRequestPost?>(null) }
+
+                BackHandler(enabled = selectedPost != null) {
+                    selectedPost = null
+                }
+
+                AnimatedContent(
+                    targetState = selectedPost,
+                    label = "HomePostTransition",
+                    transitionSpec = {
+                        fadeIn() togetherWith fadeOut()
+                    }
+                ) { post ->
+                    if (post == null) {
+                        HomeLayout(
+                            viewModel = homeViewModel,
+                            onLogout = {
+                                coroutineScope.launch {
+                                    authViewModel.logout()
+                                    onLogoutTriggered()
+                                }
+                            },
+                            onEditProfile = {
+                                navController.navigate("edit_profile/false")
+                            },
+                            onPaymentClick = onPaymentClick,
+                            onProfileClick = onProfileClick,
+                            onPostClick = { selectedPost = it },
+                            currentTheme = currentTheme,
+                            onThemeChange = onThemeChange,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@AnimatedContent
+                        )
+                    } else {
+                        PostDetailLayout(
+                            post = post,
+                            animatedVisibilityScope = this@AnimatedContent,
+                            onBack = { selectedPost = null }
+                        )
+                    }
+                }
             }
             composable("edit_profile") {
                 EditProfileScreen(editProfileFactory, navController, isFromSignupExtra)
@@ -187,7 +211,7 @@ fun EditProfileScreen(
                 }
             }
         },
-        onSave = { type, fullName, orgName, regId, web, ind, ph, loc, bio ->
+        onSave = { type, fullName, regId, web, ind, ph, loc, bio ->
             if (isFromSignup) {
                 editProfileViewModel.saveProfile(
                     type, fullName, regId, web, ind, ph, loc, bio

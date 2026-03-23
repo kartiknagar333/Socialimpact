@@ -2,8 +2,8 @@ package com.example.socialimpact.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.socialimpact.domain.model.ProfileType
 import com.example.socialimpact.domain.repository.HomeRepository
-import com.example.socialimpact.ui.layouts.ProfileType
 import com.example.socialimpact.ui.state.EditProfileUiState
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow

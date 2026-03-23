@@ -2,8 +2,8 @@ package com.example.socialimpact.data.local
 
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.example.socialimpact.domain.model.ProfileType
 import com.example.socialimpact.domain.repository.LocalProfile
-import com.example.socialimpact.ui.layouts.ProfileType
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -51,7 +51,8 @@ class PreferenceManager @Inject constructor(
         sharedPreferences.edit {
             updates["uid"]?.let { putString(KEY_USER_ID, it as String) }
             updates["type"]?.let { putString(KEY_USER_TYPE, it as String) }
-            // Map organizationName to fullName if provided during transition
+            
+            // Priority: fullName, then organizationName
             val name = updates["fullName"] as? String ?: updates["organizationName"] as? String
             name?.let { putString(KEY_FULL_NAME, it) }
             

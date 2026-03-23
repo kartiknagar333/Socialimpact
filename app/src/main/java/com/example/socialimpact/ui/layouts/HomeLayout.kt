@@ -23,6 +23,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import com.example.socialimpact.R
+import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.ui.components.LogoutConfirmationDialog
 import com.example.socialimpact.ui.components.PostCard
 import com.example.socialimpact.ui.components.ProfileDropdownMenu
@@ -37,6 +38,7 @@ fun HomeLayout(
     onEditProfile: () -> Unit,
     onPaymentClick: () -> Unit,
     onProfileClick: () -> Unit,
+    onPostClick: (HelpRequestPost) -> Unit,
     currentTheme: AppTheme,
     onThemeChange: (AppTheme) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
@@ -147,7 +149,7 @@ fun HomeLayout(
                         PostCard(
                             post = post,
                             animatedVisibilityScope = animatedVisibilityScope,
-                            onClick = { /* Navigate to Detail if needed */ }
+                            onClick = { onPostClick(post) }
                         )
                     }
                 }

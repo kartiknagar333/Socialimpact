@@ -7,9 +7,9 @@ import androidx.paging.PagingData
 import com.example.socialimpact.data.local.PreferenceManager
 import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.domain.model.UserProfile
+import com.example.socialimpact.domain.model.ProfileType
 import com.example.socialimpact.domain.repository.HomeRepository
 import com.example.socialimpact.domain.repository.LocalProfile
-import com.example.socialimpact.ui.layouts.ProfileType
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +30,7 @@ class HomeRepositoryImpl @Inject constructor(
     }
 
     private fun getSpecificPath(type: String, name: String, uid: String): String {
-        return "profile/$type/${name.trim()}/$uid"
+        return "profile/${type.lowercase()}/${name.trim()}/$uid"
     }
 
     override fun saveProfile(
@@ -58,15 +58,12 @@ class HomeRepositoryImpl @Inject constructor(
                 "fullName" to fullName
             )
 
-            when (type) {
-                ProfileType.NGO, ProfileType.CORPORATION -> {
-                    profileData["registrationId"] = registrationId
-                    profileData["website"] = website
-                    if (type == ProfileType.CORPORATION) {
-                        profileData["industry"] = industry
-                    }
+            if (type == ProfileType.NGO || type == ProfileType.CORPORATION) {
+                profileData["registrationId"] = registrationId
+                profileData["website"] = website
+                if (type == ProfileType.CORPORATION) {
+                    profileData["industry"] = industry
                 }
-                else -> {}
             }
 
             val currentTime = System.currentTimeMillis()
@@ -79,7 +76,7 @@ class HomeRepositoryImpl @Inject constructor(
             Log.d(TAG, "saveProfile: Account document created")
 
             // 2. Handle type-specific path with last updated
-            val specificPath = getSpecificPath(type.name.lowercase(), fullName, uid)
+            val specificPath = getSpecificPath(type.name, fullName, uid)
             Log.d(TAG, "saveProfile: Specific path: $specificPath")
 
 
@@ -121,7 +118,7 @@ class HomeRepositoryImpl @Inject constructor(
             val oldProfile = getLocalProfile() ?: throw Exception("Profile not found locally")
             val uid = oldProfile.uid
             val oldName = oldProfile.fullName
-            val oldSpecificPath = getSpecificPath(oldProfile.type.name.lowercase(), oldName, uid)
+            val oldSpecificPath = getSpecificPath(oldProfile.type.name, oldName, uid)
 
             // 1. Update main account document
             firestore.collection("account").document(uid).update(profileData).await()
@@ -131,7 +128,7 @@ class HomeRepositoryImpl @Inject constructor(
 
             // 3. Get new state to calculate new path
             val updatedProfile = getLocalProfile()!!
-            val newTypeName = (profileData["type"] as? String ?: updatedProfile.type.name).lowercase()
+            val newTypeName = (profileData["type"] as? String ?: updatedProfile.type.name)
             val newName = profileData["fullName"] as? String ?: updatedProfile.fullName
             val newSpecificPath = getSpecificPath(newTypeName, newName, uid)
 
@@ -147,9 +144,11 @@ class HomeRepositoryImpl @Inject constructor(
                 val specificData = fullData.toMutableMap()
                 specificData["lastUpdated"] = currentTime
                 
-                firestore.document(newSpecificPath).set(obj).await()
+                firestore.document(newSpecificPath).set(specificData).await()
             } else {
-                // Path is the same. Only update lastUpdated in the specific path document.
+                // Path is the same. Update the document with updated data.
+                val updateMap = profileData.toMutableMap()
+                updateMap["lastUpdated"] = currentTime
                 firestore.document(newSpecificPath).set(obj).await()
             }
 
