@@ -31,35 +31,33 @@ class ProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState = _uiState.asStateFlow()
 
-    fun loadProfileData(userId: String? = null) {
+    fun loadProfileData(userId: String,userType: String? = null,username: String? = null) {
         viewModelScope.launch {
-            Log.d(TAG, "loadProfileData: Requesting data for userId: $userId")
             _uiState.update { it.copy(isLoading = true) }
-            
-            // Determine the UID we need to fetch
-            val effectiveUid = userId ?: firebaseAuth.currentUser?.uid
-            
-            if (effectiveUid == null) {
-                Log.e(TAG, "loadProfileData: No UID available (user not logged in and no userId provided)")
-                _uiState.update { it.copy(isLoading = false, error = "User not identified") }
-                return@launch
+
+            var currentUser = userId
+
+            if(userId.isEmpty() || userType == null) {
+                 currentUser = firebaseAuth.currentUser?.uid ?: ""
             }
 
             // Load profile data
             try {
-                val profile = if (userId == null) {
+                val profile = if (currentUser == firebaseAuth.currentUser?.uid ) {
                     // It's "My Profile", try local first
-                    homeRepository.getLocalProfile() ?: fetchProfileFromFirestore(effectiveUid)
+                    Log.d(TAG, "loadProfileData: Fetching local profile for UID: $currentUser")
+                    homeRepository.getLocalProfile()
                 } else {
                     // It's someone else's profile, fetch from Firestore
-                    fetchProfileFromFirestore(effectiveUid)
+                    Log.d(TAG, "loadProfileData: Fetching remote profile for UID: $currentUser")
+                    fetchProfileFromFirestore(currentUser,userType.toString().lowercase(),username)
                 }
                 
                 _uiState.update { it.copy(profile = profile) }
 
                 // Fetch posts for this UID
-                Log.d(TAG, "loadProfileData: Fetching posts for UID: $effectiveUid")
-                postRepository.getUserPosts(effectiveUid).collect { result ->
+                Log.d(TAG, "loadProfileData: Fetching posts for UID: $currentUser")
+                postRepository.getUserPosts(currentUser).collect { result ->
                     result.fold(
                         onSuccess = { posts ->
                             Log.d(TAG, "loadProfileData: Successfully loaded ${posts.size} posts")
@@ -78,10 +76,15 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchProfileFromFirestore(uid: String): LocalProfile? {
+    private suspend fun fetchProfileFromFirestore(uid: String,type: String? = null,uname: String? = null): LocalProfile? {
         return try {
             Log.d(TAG, "fetchProfileFromFirestore: Fetching from account collection for UID: $uid")
-            val doc = firestore.collection("account").document(uid).get().await()
+            val doc = firestore.collection("profile")
+                .document(type ?: "")
+                .collection(uname ?: "")
+                .document(uid).get().await()
+
+
             if (doc.exists()) {
                 val data = doc.data ?: return null
                 LocalProfile(

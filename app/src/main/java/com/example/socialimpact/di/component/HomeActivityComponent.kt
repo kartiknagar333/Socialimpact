@@ -2,6 +2,7 @@ package com.example.socialimpact.di.component
 
 import com.example.socialimpact.ui.activity.HomeActivity
 import com.example.socialimpact.di.scope.ActivityScope
+import com.example.socialimpact.ui.viewmodel.DonationViewModelFactory
 import com.example.socialimpact.ui.viewmodel.EditProfileViewModelFactory
 import com.example.socialimpact.ui.viewmodel.HomeViewModelFactory
 import dagger.Subcomponent
@@ -23,4 +24,6 @@ interface HomeActivityComponent {
     fun editProfileViewModelFactory(): EditProfileViewModelFactory
     
     fun homeViewModelFactory(): HomeViewModelFactory
+
+    fun donationViewModelFactory(): DonationViewModelFactory
 }

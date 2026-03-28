@@ -4,7 +4,8 @@ data class NeedItem(
     val name: String = "",
     val unit: String = "Pcs",
     val quantity: String = "",
-    val received: String = "0"
+    val received: String = "0",
+    val pending: String = "0"
 )
 
 data class HelpRequestPost(

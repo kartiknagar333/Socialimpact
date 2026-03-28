@@ -36,11 +36,13 @@ import com.example.socialimpact.ui.viewmodel.EditProfileViewModel
 import com.example.socialimpact.ui.viewmodel.EditProfileViewModelFactory
 import com.example.socialimpact.ui.viewmodel.HomeViewModel
 import com.example.socialimpact.ui.viewmodel.HomeViewModelFactory
+import com.example.socialimpact.ui.viewmodel.DonationViewModel
+import com.example.socialimpact.ui.viewmodel.DonationViewModelFactory
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 class HomeActivity : ComponentActivity() {
-
     @Inject
     lateinit var authViewModelFactory: AuthViewModelFactory
 
@@ -49,6 +51,9 @@ class HomeActivity : ComponentActivity() {
     
     @Inject
     lateinit var homeViewModelFactory: HomeViewModelFactory
+
+    @Inject
+    lateinit var donationViewModelFactory: DonationViewModelFactory
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,6 +76,7 @@ class HomeActivity : ComponentActivity() {
                     authFactory = authViewModelFactory,
                     editProfileFactory = editProfileViewModelFactory,
                     homeFactory = homeViewModelFactory,
+                    donationFactory = donationViewModelFactory,
                     isFromSignupExtra = isFromSignup,
                     currentTheme = currentTheme,
                     onThemeChange = { currentTheme = it },
@@ -78,11 +84,10 @@ class HomeActivity : ComponentActivity() {
                     onProfileClick = {
                         val intent = Intent(this, ProfileActivity::class.java).apply {
                             putExtra("myprofile", true)
+                            putExtra("userId", "")
+                            putExtra("userType", "")
+                            putExtra("username", "")
                         }
-                        startActivity(intent)
-                    },
-                    onUploadClick = {
-                        val intent = Intent(this, UploadActivity::class.java)
                         startActivity(intent)
                     },
                     onPaymentClick = {
@@ -118,18 +123,19 @@ fun HomeNavigation(
     authFactory: ViewModelProvider.Factory,
     editProfileFactory: ViewModelProvider.Factory,
     homeFactory: ViewModelProvider.Factory,
+    donationFactory: ViewModelProvider.Factory,
     isFromSignupExtra: Boolean,
     currentTheme: AppTheme,
     onThemeChange: (AppTheme) -> Unit,
     onLogoutTriggered: () -> Unit,
     onProfileClick: () -> Unit,
-    onUploadClick: () -> Unit,
     onPaymentClick: () -> Unit
 ) {
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
     val authViewModel: AuthViewModel = viewModel(factory = authFactory)
     val homeViewModel: HomeViewModel = viewModel(factory = homeFactory)
+    val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
 
     SharedTransitionLayout {
         NavHost(
@@ -171,11 +177,16 @@ fun HomeNavigation(
                             animatedVisibilityScope = this@AnimatedContent
                         )
                     } else {
-                        PostDetailLayout(
-                            post = post,
-                            animatedVisibilityScope = this@AnimatedContent,
-                            onBack = { selectedPost = null }
-                        )
+                        val isMyPost = post.userId == currentUserId
+                        with(this@SharedTransitionLayout) {
+                            PostDetailLayout(
+                                post = post,
+                                animatedVisibilityScope = this@AnimatedContent,
+                                isMyPost = isMyPost,
+                                donationFactory = donationFactory,
+                                onBack = { selectedPost = null }
+                            )
+                        }
                     }
                 }
             }
@@ -191,7 +202,7 @@ fun HomeNavigation(
 }
 
 @Composable
-fun EditProfileScreen(
+private fun EditProfileScreen(
     factory: ViewModelProvider.Factory,
     navController: androidx.navigation.NavController,
     isFromSignup: Boolean

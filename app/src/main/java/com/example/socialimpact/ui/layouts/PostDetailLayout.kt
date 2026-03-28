@@ -1,9 +1,14 @@
 package com.example.socialimpact.ui.layouts
 
+import android.content.Intent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,31 +24,64 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.socialimpact.domain.model.Donation
 import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.domain.model.NeedItem
+import com.example.socialimpact.ui.activity.ProfileActivity
 import com.example.socialimpact.ui.components.GlassyAuthBackground
+import com.example.socialimpact.ui.viewmodel.DonationViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun SharedTransitionScope.PostDetailLayout(
     post: HelpRequestPost,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    isMyPost: Boolean,
+    donationFactory: ViewModelProvider.Factory,
     onBack: () -> Unit
 ) {
-    var showSheet by remember { mutableStateOf(false) }
-    // skipPartiallyExpanded = true ensures the sheet opens to fit its content immediately
+    val donationViewModel: DonationViewModel = viewModel(factory = donationFactory)
+    val donationUiState by donationViewModel.uiState.collectAsStateWithLifecycle()
+    
+    var showDonateSheet by remember { mutableStateOf(false) }
+    var showHistorySheet by remember { mutableStateOf(false) }
+    
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val context = LocalContext.current
+
+    LaunchedEffect(post.id) {
+        donationViewModel.fetchDonations(post.id)
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (isMyPost) return@clickable
+                                val intent = Intent(context, ProfileActivity::class.java).apply {
+                                    putExtra("myprofile", isMyPost)
+                                    putExtra("userId", post.userId)
+                                    putExtra("myusertype", post.userType)
+                                    putExtra("username", post.userName)
+                                }
+                                context.startActivity(intent)
+                            },
+                        verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             modifier = Modifier.size(40.dp).clip(CircleShape),
                             color = MaterialTheme.colorScheme.tertiary.copy(0.2f)
@@ -77,7 +115,6 @@ fun SharedTransitionScope.PostDetailLayout(
                             )
                         }
                     }
-
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -87,22 +124,44 @@ fun SharedTransitionScope.PostDetailLayout(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showSheet = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Color.Black,
-                shape = CircleShape,
-                icon = { Icon(Icons.Default.Favorite, contentDescription = null) },
-                text = { Text("Donate Now", fontWeight = FontWeight.Bold) }
-            )
-        }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left side: Donation History Button
+                ExtendedFloatingActionButton(
+                    onClick = { showHistorySheet = true },
+                    containerColor = MaterialTheme.colorScheme.onBackground,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = CircleShape,
+                    icon = { Icon(Icons.Default.History, contentDescription = null) },
+                    text = { Text("Donations", fontWeight = FontWeight.Bold) }
+
+                )
+
+                // Right side: Donate Button
+                if (!isMyPost) {
+                    ExtendedFloatingActionButton(
+                        onClick = { showDonateSheet = true },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.Black,
+                        shape = CircleShape,
+                        icon = { Icon(Icons.Default.Favorite, contentDescription = null) },
+                        text = { Text("Donate", fontWeight = FontWeight.Bold) }
+                    )
+                }
+            }
+        },
+        floatingActionButtonPosition = FabPosition.Center
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(top = 12.dp, start = 24.dp, end = 24.dp, bottom = 24.dp)
+                .padding(top = 12.dp, start = 24.dp, end = 24.dp, bottom = 120.dp)
         ) {
             // Shared Title
             Text(
@@ -160,7 +219,7 @@ fun SharedTransitionScope.PostDetailLayout(
                 }
             }
 
-            // Dynamic Needs / Special Requirements Section
+            // Dynamic Needs Section
             if (post.dynamicNeeds.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(
@@ -202,7 +261,6 @@ fun SharedTransitionScope.PostDetailLayout(
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.onBackground,
                                     fontWeight = FontWeight.Bold
-
                                 )
                             }
                             Spacer(modifier = Modifier.height(8.dp))
@@ -212,13 +270,19 @@ fun SharedTransitionScope.PostDetailLayout(
                                 color = MaterialTheme.colorScheme.tertiary,
                                 trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                modifier = Modifier.align(Alignment.End),
+                                text = "Pending ${item.pending}  ${item.unit}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
                         }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-
             DetailSection(Icons.Default.LocationOn, "Location", post.address)
             DetailSection(Icons.Default.CalendarToday, "Timeline", "${post.startDate} - ${post.endDate}")
 
@@ -226,8 +290,7 @@ fun SharedTransitionScope.PostDetailLayout(
             val allTags = post.selectedCategories + post.selectedNeeds
             if (allTags.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(24.dp))
-                Text("Categories & Needs", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.outline)
+                Text("Categories & Needs", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(12.dp))
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -235,36 +298,58 @@ fun SharedTransitionScope.PostDetailLayout(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     allTags.forEach { tag ->
-                        SuggestionChip(onClick = {}, label = { Text(tag,
-                            color = MaterialTheme.colorScheme.onBackground) })
+                        SuggestionChip(onClick = {}, label = { Text(tag, color = MaterialTheme.colorScheme.onBackground) })
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(100.dp))
         }
 
-        if (showSheet) {
+        // Modal Sheet for Donation Form
+        if (showDonateSheet) {
             ModalBottomSheet(
-                onDismissRequest = { showSheet = false },
+                onDismissRequest = { showDonateSheet = false },
                 sheetState = sheetState,
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                dragHandle = null, // Disable default handle
-                containerColor = Color.Black, // Solid black base
+                dragHandle = null,
+                containerColor = Color.Black,
                 tonalElevation = 0.dp
             ) {
-                // Glassy background now covers the entire sheet content
                 GlassyAuthBackground(
                     modifier = Modifier.wrapContentHeight(),
                     backgroundColor = Color.Transparent
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        // Manual DragHandle inside the glassy area
                         BottomSheetDefaults.DragHandle(color = Color.White)
-                        
                         DonationSheetContent(
                             post = post,
-                            onClose = { showSheet = false }
+                            onClose = { showDonateSheet = false }
+                        )
+                    }
+                }
+            }
+        }
+
+        // Modal Sheet for Donation History
+        if (showHistorySheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showHistorySheet = false },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                dragHandle = null,
+                containerColor = Color.Black,
+                tonalElevation = 0.dp
+            ) {
+                GlassyAuthBackground(
+                    modifier = Modifier.fillMaxHeight(0.8f),
+                    backgroundColor = Color.Transparent
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        BottomSheetDefaults.DragHandle(color = Color.White)
+                        DonationsListSheet(
+                            donations = donationUiState.donations,
+                            isLoading = donationUiState.isLoading,
+                            onClose = { showHistorySheet = false }
                         )
                     }
                 }
@@ -274,11 +359,107 @@ fun SharedTransitionScope.PostDetailLayout(
 }
 
 @Composable
-fun DonationSheetContent(
+private fun DonationsListSheet(
+    donations: List<Donation>,
+    isLoading: Boolean,
+    onClose: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Donation History",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            modifier = Modifier.padding(16.dp)
+        )
+
+        if (isLoading) {
+            CircularProgressIndicator(color = Color.White)
+        } else if (donations.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No donations yet", color = Color.White.copy(0.7f))
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(donations) { donation ->
+                    DonationItemCard(donation)
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        TextButton(onClick = onClose) {
+            Text("Close", color = Color.White)
+        }
+    }
+}
+
+@Composable
+private fun DonationItemCard(donation: Donation) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.1f)),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    modifier = Modifier.size(32.dp).clip(CircleShape),
+                    color = Color.White.copy(0.2f)
+                ) {
+                    val icon = when (donation.userType.lowercase()) {
+                        "person" -> Icons.Default.Person
+                        "ngo" -> Icons.Default.Groups
+                        else -> Icons.Default.Business
+                    }
+                    Icon(icon, null, modifier = Modifier.padding(6.dp), tint = Color.White)
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(donation.userName, color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(donation.userType, color = Color.White.copy(0.7f), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            donation.dynamicNeed.forEach { item ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(item.name, color = Color.White)
+                    Text("${item.quantity} ${if (item.isPending) "(Pending)" else ""}", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+            
+            donation.timestamp?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(it.toDate()),
+                    color = Color.White.copy(0.5f),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.align(Alignment.End)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DonationSheetContent(
     post: HelpRequestPost,
     onClose: () -> Unit
 ) {
-    // Default selection logic: select first available option
     var selection by remember { 
         mutableStateOf<Any?>(
             if (post.fundAmount.isNotEmpty()) "fund" else post.dynamicNeeds.firstOrNull()
@@ -311,15 +492,14 @@ fun DonationSheetContent(
         
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Horizontal Chip Row
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             val chipColors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = Color.White.copy(0.9f),
+                selectedContainerColor = Color.White,
                 selectedLabelColor = MaterialTheme.colorScheme.tertiary,
-                labelColor = Color.White.copy(0.5f),
+                labelColor = Color.White
             )
 
             if (post.fundAmount.isNotEmpty()) {
@@ -338,8 +518,8 @@ fun DonationSheetContent(
                     border = FilterChipDefaults.filterChipBorder(
                         enabled = true,
                         selected = selection == "fund",
-                        borderColor = Color.White.copy(0.5f),
-                        selectedBorderColor = Color.White,
+                        borderColor = Color.White,
+                        selectedBorderColor = Color.White
                     )
                 )
             }
@@ -360,8 +540,9 @@ fun DonationSheetContent(
                     border = FilterChipDefaults.filterChipBorder(
                         enabled = true,
                         selected = selection == item,
-                        borderColor = Color.White.copy(0.5f),
-                        selectedBorderColor = Color.White,                    )
+                        borderColor = Color.White,
+                        selectedBorderColor = Color.White
+                    )
                 )
             }
         }
@@ -400,7 +581,7 @@ fun DonationSheetContent(
             }
             is NeedItem -> {
                 Text(
-                    text = "Donation will be counted when they receive meanwhile it will be under pending status.",
+                    text = "Physical donations will be officially recorded once received. Your contribution remains in 'Pending' status until confirmation by the recipient.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White,
                     textAlign = TextAlign.Center,
@@ -417,7 +598,7 @@ fun DonationSheetContent(
                         value = amountOrQuantity,
                         onValueChange = { amountOrQuantity = it },
                         label = { Text("Quantity", color = Color.White, fontWeight = FontWeight.SemiBold) },
-                        prefix = { Text("${selected.unit} ", fontWeight = FontWeight.Bold, color = Color.White) },
+                        prefix = { Text("${selected.unit} ", fontWeight = FontWeight.Bold, color = Color.Black) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                         textStyle = LocalTextStyle.current.copy(
@@ -461,7 +642,7 @@ fun DonationSheetContent(
         Spacer(modifier = Modifier.height(16.dp))
         
         TextButton(onClick = onClose) {
-            Text("Cancel", color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text("Cancel", color = Color.White, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -470,5 +651,4 @@ fun DonationSheetContent(
 private fun DetailSection(icon: ImageVector, label: String, value: String) {
     if (value.isBlank()) return
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.outline); Spacer(modifier = Modifier.width(16.dp)); Column { Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline); Text(text = value, style = MaterialTheme.typography.bodyLarge) } }
-
 }

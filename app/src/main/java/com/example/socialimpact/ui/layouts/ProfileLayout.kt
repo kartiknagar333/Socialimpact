@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
 import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.domain.model.ProfileType
 import com.example.socialimpact.domain.repository.LocalProfile
@@ -48,6 +49,7 @@ fun ProfileLayout(
     profile: LocalProfile?,
     myPosts: List<HelpRequestPost>,
     isMyProfile: Boolean,
+    donationFactory: ViewModelProvider.Factory,
     onBack: () -> Unit,
     onUploadClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -99,6 +101,8 @@ fun ProfileLayout(
                 PostDetailLayout(
                     post = post,
                     animatedVisibilityScope = this@AnimatedContent,
+                    isMyPost = isMyProfile,
+                    donationFactory = donationFactory,
                     onBack = { selectedPost = null }
                 )
             }

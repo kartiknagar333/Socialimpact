@@ -72,7 +72,8 @@ fun MyImpactTab(
                     PostCard(
                         post = post,
                         animatedVisibilityScope = animatedVisibilityScope,
-                        onClick = { onPostClick(post) }
+                        onClick = { onPostClick(post) },
+                        isMyPost = true
                     )
                 }
             }

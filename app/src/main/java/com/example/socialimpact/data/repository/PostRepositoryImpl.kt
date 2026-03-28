@@ -1,8 +1,11 @@
 package com.example.socialimpact.data.repository
 
 import android.util.Log
+import com.example.socialimpact.domain.model.Donation
+import com.example.socialimpact.domain.model.DonationNeedItem
 import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.domain.repository.PostRepository
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -51,6 +54,54 @@ class PostRepositoryImpl @Inject constructor(
             emit(Result.success(posts))
         } catch (e: Exception) {
             Log.e(TAG, "getUserPosts: Error fetching posts for userId: $userId", e)
+            emit(Result.failure(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    override fun getDonations(postId: String): Flow<Result<List<Donation>>> = flow {
+        try {
+            val snapshot = firestore.collection("posts")
+                .document(postId)
+                .collection("donations")
+                .get()
+                .await()
+
+            val donations = snapshot.documents.map { doc ->
+                val userRef = doc.get("user_ref") as? DocumentReference
+                var userName = "Anonymous"
+                var userType = "PERSON"
+                
+                if (userRef != null) {
+                    val userDoc = userRef.get().await()
+                    if (userDoc.exists()) {
+                        userName = userDoc.getString("fullName") ?: "Anonymous"
+                        userType = userDoc.getString("type") ?: "PERSON"
+                    }
+                }
+
+                // Manual mapping for fields with potential different names in Firestore
+                val dynamicNeedList = doc.get("dynamicNeed") as? List<Map<String, Any>>
+                val items = dynamicNeedList?.map { item ->
+                    DonationNeedItem(
+                        name = item["name"] as? String ?: "",
+                        quantity = item["quantity"] as? String ?: "",
+                        isPending = item["ispending"] as? Boolean ?: true,
+                        timestamp = item["timestamp"] as? com.google.firebase.Timestamp
+                    )
+                } ?: emptyList()
+
+                Donation(
+                    id = doc.id,
+                    userId = userRef?.id ?: "",
+                    userName = userName,
+                    userType = userType,
+                    dynamicNeed = items,
+                    lastDonated = doc.getTimestamp("last_donated"),
+                    timestamp = doc.getTimestamp("timestamp")
+                )
+            }
+            emit(Result.success(donations))
+        } catch (e: Exception) {
             emit(Result.failure(e))
         }
     }.flowOn(Dispatchers.IO)

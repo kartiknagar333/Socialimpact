@@ -6,7 +6,6 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -111,7 +110,7 @@ fun HomeLayout(
             ) {
                 Icon(
                     imageVector = Icons.Default.Person,
-                    contentDescription = "Create Post"
+                    contentDescription = "My Profile"
                 )
             }
         }
@@ -149,7 +148,8 @@ fun HomeLayout(
                         PostCard(
                             post = post,
                             animatedVisibilityScope = animatedVisibilityScope,
-                            onClick = { onPostClick(post) }
+                            onClick = { onPostClick(post) },
+                            isMyPost = false
                         )
                     }
                 }

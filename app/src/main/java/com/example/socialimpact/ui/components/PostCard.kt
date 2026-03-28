@@ -1,5 +1,6 @@
 package com.example.socialimpact.ui.components
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -18,7 +19,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat.startActivity
 import com.example.socialimpact.domain.model.HelpRequestPost
+import com.example.socialimpact.ui.activity.ProfileActivity
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,6 +31,7 @@ fun SharedTransitionScope.PostCard(
     post: HelpRequestPost,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
+    isMyPost: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
@@ -52,6 +56,7 @@ fun SharedTransitionScope.PostCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
+                // i want put click listerner here
             ) {
                 Surface(
                     modifier = Modifier.size(40.dp).clip(CircleShape),

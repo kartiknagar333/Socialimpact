@@ -2,10 +2,12 @@
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)   // ⭐ ADD THIS
+    //alias(libs.plugins.kotlin.android)   // ⭐ ADD THIS
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
-    id("org.jetbrains.kotlin.kapt")  // ✅ ADD THIS
+    //  id("org.jetbrains.kotlin.kapt")  // ✅ ADD THIS
+
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -15,6 +17,7 @@ android {
     defaultConfig {
         applicationId = "com.example.socialimpact"
         minSdk = 24
+        //noinspection OldTargetApi
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -54,7 +57,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
-    
+
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
@@ -69,7 +72,7 @@ dependencies {
     // Dagger 2
     implementation(libs.dagger)
     implementation(libs.firebase.functions)
-    kapt(libs.dagger.compiler)
+    ksp(libs.dagger.compiler)
     // Coroutines Tasks
     implementation(libs.kotlinx.coroutines.play.services)
 
