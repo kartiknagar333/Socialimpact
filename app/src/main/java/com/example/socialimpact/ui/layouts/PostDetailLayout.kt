@@ -3,6 +3,7 @@ package com.example.socialimpact.ui.layouts
 import android.content.Intent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -53,15 +54,22 @@ fun SharedTransitionScope.PostDetailLayout(
 ) {
     val donationViewModel: DonationViewModel = viewModel(factory = donationFactory)
     val donationUiState by donationViewModel.uiState.collectAsStateWithLifecycle()
+    val processingItems by donationViewModel.processingItems.collectAsStateWithLifecycle()
+    val observedPost by donationViewModel.observedPost.collectAsStateWithLifecycle()
+    
+    // Use the latest observed post data if available, otherwise use initial post
+    val displayPost = observedPost ?: post
     
     var showDonateSheet by remember { mutableStateOf(false) }
     var showHistorySheet by remember { mutableStateOf(false) }
     
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val historySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
 
     LaunchedEffect(post.id) {
         donationViewModel.fetchDonations(post.id)
+        donationViewModel.startObservingPost(post.id)
     }
 
     Scaffold(
@@ -165,7 +173,7 @@ fun SharedTransitionScope.PostDetailLayout(
         ) {
             // Shared Title
             Text(
-                text = post.title,
+                text = displayPost.title,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.sharedElement(
@@ -178,7 +186,7 @@ fun SharedTransitionScope.PostDetailLayout(
 
             // Shared Description
             Text(
-                text = post.description,
+                text = displayPost.description,
                 style = MaterialTheme.typography.bodyLarge,
                 lineHeight = 28.sp,
                 modifier = Modifier.sharedElement(
@@ -187,11 +195,11 @@ fun SharedTransitionScope.PostDetailLayout(
                 )
             )
 
-            if (post.fundAmount.isNotEmpty()) {
+            if (displayPost.fundAmount.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(24.dp))
                 val fundProgress = try {
-                    val goal = post.fundAmount.toFloat()
-                    val received = post.fundReceived.toFloat()
+                    val goal = displayPost.fundAmount.toFloat()
+                    val received = displayPost.fundReceived.toFloat()
                     if (goal > 0) received / goal else 0f
                 } catch (e: Exception) { 0f }
 
@@ -205,7 +213,7 @@ fun SharedTransitionScope.PostDetailLayout(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text("Funding", style = MaterialTheme.typography.labelSmall)
-                                Text("${post.fundReceived} / ${post.fundAmount} $", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                Text("${displayPost.fundReceived} / ${displayPost.fundAmount} $", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             }
                         }
                         Spacer(modifier = Modifier.height(12.dp))
@@ -220,7 +228,7 @@ fun SharedTransitionScope.PostDetailLayout(
             }
 
             // Dynamic Needs Section
-            if (post.dynamicNeeds.isNotEmpty()) {
+            if (displayPost.dynamicNeeds.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(
                     text = "Special Requirements",
@@ -229,7 +237,7 @@ fun SharedTransitionScope.PostDetailLayout(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                post.dynamicNeeds.forEach { item ->
+                displayPost.dynamicNeeds.forEach { item ->
                     val needProgress = try {
                         val goal = item.quantity.toFloat()
                         val received = item.received.toFloat()
@@ -283,11 +291,11 @@ fun SharedTransitionScope.PostDetailLayout(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            DetailSection(Icons.Default.LocationOn, "Location", post.address)
-            DetailSection(Icons.Default.CalendarToday, "Timeline", "${post.startDate} - ${post.endDate}")
+            DetailSection(Icons.Default.LocationOn, "Location", displayPost.address)
+            DetailSection(Icons.Default.CalendarToday, "Timeline", "${displayPost.startDate} - ${displayPost.endDate}")
 
             // Tags
-            val allTags = post.selectedCategories + post.selectedNeeds
+            val allTags = displayPost.selectedCategories + displayPost.selectedNeeds
             if (allTags.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text("Categories & Needs", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
@@ -322,7 +330,7 @@ fun SharedTransitionScope.PostDetailLayout(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         BottomSheetDefaults.DragHandle(color = Color.White)
                         DonationSheetContent(
-                            post = post,
+                            post = displayPost,
                             onClose = { showDonateSheet = false }
                         )
                     }
@@ -349,6 +357,11 @@ fun SharedTransitionScope.PostDetailLayout(
                         DonationsListSheet(
                             donations = donationUiState.donations,
                             isLoading = donationUiState.isLoading,
+                            isMyPost = isMyPost,
+                            processingItems = processingItems,
+                            onMarkReceived = { donationId, itemName, quantity ->
+                                donationViewModel.markItemAsReceived(post.id, donationId, itemName, quantity)
+                            },
                             onClose = { showHistorySheet = false }
                         )
                     }
@@ -362,6 +375,9 @@ fun SharedTransitionScope.PostDetailLayout(
 private fun DonationsListSheet(
     donations: List<Donation>,
     isLoading: Boolean,
+    isMyPost: Boolean,
+    processingItems: Set<String>,
+    onMarkReceived: (String, String, String) -> Unit,
     onClose: () -> Unit
 ) {
     Column(
@@ -375,7 +391,7 @@ private fun DonationsListSheet(
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = Color.White,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(8.dp)
         )
 
         if (isLoading) {
@@ -391,7 +407,14 @@ private fun DonationsListSheet(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(donations) { donation ->
-                    DonationItemCard(donation)
+                    DonationItemCard(
+                        donation = donation, 
+                        isMyPost = isMyPost,
+                        processingItems = processingItems,
+                        onMarkReceived = { itemName, quantity -> 
+                            onMarkReceived(donation.id, itemName, quantity) 
+                        }
+                    )
                 }
             }
         }
@@ -404,7 +427,31 @@ private fun DonationsListSheet(
 }
 
 @Composable
-private fun DonationItemCard(donation: Donation) {
+private fun DonationItemCard(
+    donation: Donation, 
+    isMyPost: Boolean,
+    processingItems: Set<String>,
+    onMarkReceived: (String, String) -> Unit
+) {
+    var showConfirmDialog by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+    if (showConfirmDialog != null) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = null },
+            title = { Text("Confirm Receipt") },
+            text = { Text("Are you sure you have received ${showConfirmDialog?.second} of ${showConfirmDialog?.first}?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirmDialog?.let { onMarkReceived(it.first, it.second) }
+                    showConfirmDialog = null
+                }) { Text("Yes, Received") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = null }) { Text("Cancel") }
+            }
+        )
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.1f)),
@@ -433,16 +480,72 @@ private fun DonationItemCard(donation: Donation) {
             Spacer(modifier = Modifier.height(12.dp))
             
             donation.dynamicNeed.forEach { item ->
+                val isProcessing = processingItems.contains("${donation.id}-${item.name}")
+                
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(item.name, color = Color.White)
-                    Text("${item.quantity} ${if (item.isPending) "(Pending)" else ""}", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = item.name,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+                    
+                    if (isMyPost && item.isPending) {
+                        if (isProcessing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp).padding(end = 8.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            TextButton(
+                                onClick = { showConfirmDialog = item.name to item.quantity },
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text(
+                                    text = "Received",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier
+                                        .background(
+                                            color = Color.Black.copy(alpha = 0.3f),
+                                            shape = CircleShape
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    } else if (!isMyPost && item.isPending) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = "Pending",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp).padding(end = 8.dp)
+                        )
+
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Received",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp).padding(end = 8.dp)
+                        )
+                    }
+                    
+                    Text(
+                        text = item.quantity,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
                 }
             }
             
-            donation.timestamp?.let {
+            donation.lastDonated?.let {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(it.toDate()),
@@ -594,24 +697,31 @@ private fun DonationSheetContent(
                     visible = selection is NeedItem,
                     enter = slideInHorizontally(animationSpec = tween(durationMillis = 1000)) { -it } + fadeIn()
                 ) {
+                    val inputTextStyle = LocalTextStyle.current.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White
+                    )
+
                     OutlinedTextField(
                         value = amountOrQuantity,
                         onValueChange = { amountOrQuantity = it },
-                        label = { Text("Quantity", color = Color.White, fontWeight = FontWeight.SemiBold) },
-                        prefix = { Text("${selected.unit} ", fontWeight = FontWeight.Bold, color = Color.Black) },
+                        label = {
+                            Text("Quantity", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        },
+                        prefix = {
+                            Text(
+                                "${selected.unit} ",
+                                style = inputTextStyle // 👈 SAME style
+                            )
+                        },
+                        textStyle = inputTextStyle,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
-                        textStyle = LocalTextStyle.current.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
-                        ),
                         shape = RoundedCornerShape(16.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color.White,
-                            focusedLeadingIconColor = Color.White,
-                            focusedLabelColor = Color.White,
                             unfocusedBorderColor = Color.LightGray,
-                            unfocusedLeadingIconColor = Color.LightGray,
+                            focusedLabelColor = Color.White,
                             unfocusedLabelColor = Color.LightGray,
                         )
                     )

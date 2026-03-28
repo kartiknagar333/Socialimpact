@@ -5,5 +5,7 @@ import com.example.socialimpact.domain.model.Donation
 data class DonationUiState(
     val donations: List<Donation> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val isProcessing: Boolean = false,
+    val error: String? = null,
+    val successMessage: String? = null
 )

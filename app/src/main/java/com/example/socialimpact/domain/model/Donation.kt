@@ -16,5 +16,4 @@ data class Donation(
     val userType: String = "",
     val dynamicNeed: List<DonationNeedItem> = emptyList(),
     val lastDonated: Timestamp? = null,
-    val timestamp: Timestamp? = null
 )
