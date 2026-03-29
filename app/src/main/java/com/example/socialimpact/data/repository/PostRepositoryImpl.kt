@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.socialimpact.domain.model.Donation
 import com.example.socialimpact.domain.model.DonationNeedItem
 import com.example.socialimpact.domain.model.HelpRequestPost
+import com.example.socialimpact.domain.model.NeedItem
 import com.example.socialimpact.domain.repository.PostRepository
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentReference
@@ -122,7 +123,8 @@ class PostRepositoryImpl @Inject constructor(
         postId: String,
         donationId: String,
         itemName: String,
-        quantity: String
+        quantity: String,
+        itemIndex: Int
     ): Flow<Result<Unit>> = flow {
         try {
             firestore.runTransaction { transaction ->
@@ -132,10 +134,11 @@ class PostRepositoryImpl @Inject constructor(
                 val postSnapshot = transaction.get(postRef)
                 val donationSnapshot = transaction.get(donationRef)
 
-                // 1. Update Donation Document: set ispending to false for the specific item
+                // 1. Update Donation Document: set ispending to false for ONLY the item at index
+                @Suppress("UNCHECKED_CAST")
                 val donationDynamicNeed = donationSnapshot.get("dynamicNeed") as? List<Map<String, Any>>
-                val updatedDonationNeed = donationDynamicNeed?.map { item ->
-                    if (item["name"] == itemName) {
+                val updatedDonationNeed = donationDynamicNeed?.mapIndexed { index, item ->
+                    if (index == itemIndex) {
                         item.toMutableMap().apply { this["ispending"] = false }
                     } else {
                         item
@@ -143,19 +146,19 @@ class PostRepositoryImpl @Inject constructor(
                 }
                 transaction.update(donationRef, "dynamicNeed", updatedDonationNeed)
 
-                // 2. Update Post Document: increase received count in dynamicNeeds
+                // 2. Update Post Document: update received and pending aggregate counts
+                @Suppress("UNCHECKED_CAST")
                 val postDynamicNeeds = postSnapshot.get("dynamicNeeds") as? List<Map<String, Any>>
                 val updatedPostNeeds = postDynamicNeeds?.map { need ->
                     if (need["name"] == itemName) {
-                        val currentReceivedValue = need["received"]
-                        // Handle potential Double or String in Firestore
-                        val currentReceived = when (currentReceivedValue) {
-                            is Number -> currentReceivedValue.toDouble()
-                            is String -> currentReceivedValue.toDoubleOrNull() ?: 0.0
-                            else -> 0.0
-                        }
+                        val currentReceived = (need["received"]?.toString() ?: "0").toDoubleOrNull() ?: 0.0
+                        val currentPending = (need["pending"]?.toString() ?: "0").toDoubleOrNull() ?: 0.0
                         val donatedQuantity = quantity.toDoubleOrNull() ?: 0.0
-                        need.toMutableMap().apply { this["received"] = (currentReceived + donatedQuantity).toString() }
+                        
+                        need.toMutableMap().apply { 
+                            this["received"] = (currentReceived + donatedQuantity).toString()
+                            this["pending"] = (currentPending - donatedQuantity).coerceAtLeast(0.0).toString()
+                        }
                     } else {
                         need
                     }

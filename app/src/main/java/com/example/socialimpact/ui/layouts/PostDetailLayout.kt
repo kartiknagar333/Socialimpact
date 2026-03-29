@@ -144,7 +144,7 @@ fun SharedTransitionScope.PostDetailLayout(
                     containerColor = MaterialTheme.colorScheme.onBackground,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = CircleShape,
-                    icon = { Icon(Icons.Default.History, contentDescription = null) },
+                    icon = { Icon(Icons.Default.VolunteerActivism, contentDescription = null) },
                     text = { Text("Donations", fontWeight = FontWeight.Bold) }
 
                 )
@@ -278,13 +278,16 @@ fun SharedTransitionScope.PostDetailLayout(
                                 color = MaterialTheme.colorScheme.tertiary,
                                 trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                modifier = Modifier.align(Alignment.End),
-                                text = "Pending ${item.pending}  ${item.unit}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onBackground,
-                            )
+                            val pendingCount = item.pending.toIntOrNull() ?: 0
+                            if (pendingCount > 0) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    modifier = Modifier.align(Alignment.End),
+                                    text = "Pending ${item.pending}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
                         }
                     }
                 }
@@ -355,12 +358,13 @@ fun SharedTransitionScope.PostDetailLayout(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         BottomSheetDefaults.DragHandle(color = Color.White)
                         DonationsListSheet(
+                            post = displayPost,
                             donations = donationUiState.donations,
                             isLoading = donationUiState.isLoading,
                             isMyPost = isMyPost,
                             processingItems = processingItems,
-                            onMarkReceived = { donationId, itemName, quantity ->
-                                donationViewModel.markItemAsReceived(post.id, donationId, itemName, quantity)
+                            onMarkReceived = { donationId, itemName, quantity, itemIndex ->
+                                donationViewModel.markItemAsReceived(post.id, donationId, itemName, quantity, itemIndex)
                             },
                             onClose = { showHistorySheet = false }
                         )
@@ -373,11 +377,12 @@ fun SharedTransitionScope.PostDetailLayout(
 
 @Composable
 private fun DonationsListSheet(
+    post: HelpRequestPost,
     donations: List<Donation>,
     isLoading: Boolean,
     isMyPost: Boolean,
     processingItems: Set<String>,
-    onMarkReceived: (String, String, String) -> Unit,
+    onMarkReceived: (String, String, String, Int) -> Unit,
     onClose: () -> Unit
 ) {
     Column(
@@ -408,11 +413,12 @@ private fun DonationsListSheet(
             ) {
                 items(donations) { donation ->
                     DonationItemCard(
+                        post = post,
                         donation = donation, 
                         isMyPost = isMyPost,
                         processingItems = processingItems,
-                        onMarkReceived = { itemName, quantity -> 
-                            onMarkReceived(donation.id, itemName, quantity) 
+                        onMarkReceived = { itemName, quantity, itemIndex -> 
+                            onMarkReceived(donation.id, itemName, quantity, itemIndex) 
                         }
                     )
                 }
@@ -428,12 +434,13 @@ private fun DonationsListSheet(
 
 @Composable
 private fun DonationItemCard(
+    post: HelpRequestPost,
     donation: Donation, 
     isMyPost: Boolean,
     processingItems: Set<String>,
-    onMarkReceived: (String, String) -> Unit
+    onMarkReceived: (String, String, Int) -> Unit
 ) {
-    var showConfirmDialog by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var showConfirmDialog by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
 
     if (showConfirmDialog != null) {
         AlertDialog(
@@ -442,12 +449,12 @@ private fun DonationItemCard(
             text = { Text("Are you sure you have received ${showConfirmDialog?.second} of ${showConfirmDialog?.first}?") },
             confirmButton = {
                 TextButton(onClick = {
-                    showConfirmDialog?.let { onMarkReceived(it.first, it.second) }
+                    showConfirmDialog?.let { onMarkReceived(it.first, it.second, it.third) }
                     showConfirmDialog = null
-                }) { Text("Yes, Received") }
+                }) { Text("Yes, Received", color = MaterialTheme.colorScheme.tertiary) }
             },
             dismissButton = {
-                TextButton(onClick = { showConfirmDialog = null }) { Text("Cancel") }
+                TextButton(onClick = { showConfirmDialog = null }) { Text("Cancel", color = MaterialTheme.colorScheme.tertiary) }
             }
         )
     }
@@ -479,11 +486,11 @@ private fun DonationItemCard(
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            donation.dynamicNeed.forEach { item ->
-                val isProcessing = processingItems.contains("${donation.id}-${item.name}")
+            donation.dynamicNeed.forEachIndexed { index, item ->
+                val isProcessing = processingItems.contains("${donation.id}-$index")
                 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -502,17 +509,17 @@ private fun DonationItemCard(
                             )
                         } else {
                             TextButton(
-                                onClick = { showConfirmDialog = item.name to item.quantity },
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                                onClick = { showConfirmDialog = Triple(item.name, item.quantity, index) },
+                                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
                                 modifier = Modifier.height(32.dp)
                             ) {
                                 Text(
-                                    text = "Received",
-                                    color = MaterialTheme.colorScheme.primary,
+                                    text = "Approve ${item.quantity} ${post.getUnitByName(item.name)}",
+                                    color = Color.Black,
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier
                                         .background(
-                                            color = Color.Black.copy(alpha = 0.3f),
+                                            color = MaterialTheme.colorScheme.primary,
                                             shape = CircleShape
                                         )
                                         .padding(horizontal = 12.dp, vertical = 4.dp)
@@ -520,33 +527,75 @@ private fun DonationItemCard(
                             }
                         }
                     } else if (!isMyPost && item.isPending) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = "Pending",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp).padding(end = 8.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(
+                                    color = Color.Black.copy(alpha = 0.3f),
+                                    shape = CircleShape
+                                )
+                                .padding(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = null,
+                                tint = Color.White.copy(0.7f),
+                                modifier = Modifier.size(16.dp) // Adjust size as needed
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Pending",
+                                color = Color.White.copy(0.7f),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 10.sp
+                            )
+
+                            Text(
+                                text = "${item.quantity} ${post.getUnitByName(item.name)}",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
 
                     } else {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Received",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp).padding(end = 8.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(
+                                    color = Color.Black.copy(alpha = 0.3f),
+                                    shape = CircleShape
+                                )
+                                .padding(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Color.White.copy(0.7f),
+                                modifier = Modifier.size(16.dp) // Adjust size as needed
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Received",
+                                color = Color.White.copy(0.7f),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 10.sp
+                            )
+
+                            Text(
+                                text = "${item.quantity} ${post.getUnitByName(item.name)}",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
                     }
                     
-                    Text(
-                        text = item.quantity,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
+
                 }
             }
             
             donation.lastDonated?.let {
-                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(it.toDate()),
                     color = Color.White.copy(0.5f),

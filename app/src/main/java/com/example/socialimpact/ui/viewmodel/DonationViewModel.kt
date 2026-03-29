@@ -27,7 +27,6 @@ class DonationViewModel @Inject constructor(
     private val _observedPost = MutableStateFlow<HelpRequestPost?>(null)
     val observedPost: StateFlow<HelpRequestPost?> = _observedPost.asStateFlow()
 
-    // Track processing state for individual items to show per-item loading
     private val _processingItems = MutableStateFlow<Set<String>>(emptySet())
     val processingItems = _processingItems.asStateFlow()
 
@@ -58,18 +57,18 @@ class DonationViewModel @Inject constructor(
         }
     }
 
-    fun markItemAsReceived(postId: String, donationId: String, itemName: String, quantity: String) {
-        val processingKey = "$donationId-$itemName"
+    fun markItemAsReceived(postId: String, donationId: String, itemName: String, quantity: String, itemIndex: Int) {
+        val key = "$donationId-$itemIndex" // Unique key using index
         viewModelScope.launch {
-            _processingItems.update { it + processingKey }
-            postRepository.markDonationItemReceived(postId, donationId, itemName, quantity).collect { result ->
+            _processingItems.update { it + key }
+            postRepository.markDonationItemReceived(postId, donationId, itemName, quantity, itemIndex).collect { result ->
                 result.fold(
                     onSuccess = {
-                        _processingItems.update { it - processingKey }
-                        // Note: refresh is handled by the snapshot listener in observePost
+                        _processingItems.update { it - key }
+                        fetchDonations(postId)
                     },
                     onFailure = { e ->
-                        _processingItems.update { it - processingKey }
+                        _processingItems.update { it - key }
                         _uiState.update { it.copy(error = e.message) }
                     }
                 )

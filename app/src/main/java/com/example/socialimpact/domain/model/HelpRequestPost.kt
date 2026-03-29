@@ -24,4 +24,9 @@ data class HelpRequestPost(
     val endDate: String = "",
     val address: String = "",
     val timestamp: Long = System.currentTimeMillis()
-)
+) {
+
+    fun getUnitByName(name: String): String? {
+        return dynamicNeeds.find { it.name.equals(name, ignoreCase = true) }?.unit
+    }
+}
