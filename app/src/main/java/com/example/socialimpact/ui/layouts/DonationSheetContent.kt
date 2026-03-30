@@ -24,6 +24,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.domain.model.NeedItem
 import com.example.socialimpact.ui.viewmodel.DonationViewModel
+import com.google.firebase.app
+import com.stripe.android.PaymentConfiguration
+import com.stripe.android.paymentsheet.PaymentSheet
+import com.stripe.android.paymentsheet.rememberPaymentSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,8 +45,44 @@ fun DonationSheetContent(
     }
     var amountOrQuantity by remember { mutableStateOf("") }
 
+    // Stripe PaymentSheet initialization
+    val paymentSheet = rememberPaymentSheet { result ->
+        when (result) {
+            is com.stripe.android.paymentsheet.PaymentSheetResult.Completed -> {
+                viewModel.handleStripeResult(true)
+                onClose()
+            }
+            is com.stripe.android.paymentsheet.PaymentSheetResult.Failed -> {
+                viewModel.handleStripeResult(false)
+            }
+            is com.stripe.android.paymentsheet.PaymentSheetResult.Canceled -> {
+                viewModel.handleStripeResult(false)
+            }
+        }
+    }
+
+    LaunchedEffect(uiState.stripePaymentData) {
+        uiState.stripePaymentData?.let { data ->
+            PaymentConfiguration.init(com.google.firebase.Firebase.app.applicationContext, data.publishableKey)
+            
+            val customerConfig = PaymentSheet.CustomerConfiguration(
+                id = data.customerId,
+                ephemeralKeySecret = data.ephemeralKeySecret
+            )
+            
+            paymentSheet.presentWithPaymentIntent(
+                paymentIntentClientSecret = data.paymentIntentClientSecret,
+                configuration = PaymentSheet.Configuration(
+                    merchantDisplayName = "Social Impact Platform",
+                    customer = customerConfig,
+                    allowsDelayedPaymentMethods = true
+                )
+            )
+        }
+    }
+
     LaunchedEffect(uiState.successMessage) {
-        if (uiState.successMessage != null) {
+        if (uiState.successMessage != null && uiState.stripePaymentData == null) {
             onClose()
             viewModel.clearSuccess()
         }
@@ -141,10 +181,45 @@ fun DonationSheetContent(
                 )
                 
                 Spacer(modifier = Modifier.height(32.dp))
+                val inputTextStyle = LocalTextStyle.current.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White
+                )
+
+                OutlinedTextField(
+                    value = amountOrQuantity,
+                    onValueChange = { amountOrQuantity = it },
+                    label = {
+                        Text("Amount", color = Color.White, fontWeight = FontWeight.SemiBold)
+                    },
+                    prefix = {
+                        Text(
+                            "USD ",
+                            style = inputTextStyle
+                        )
+                    },
+                    textStyle = inputTextStyle,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color.LightGray,
+                        focusedLabelColor = Color.White,
+                        unfocusedLabelColor = Color.LightGray,
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
 
                 Button(
-                    onClick = { /* TODO: Stripe Payment */ },
-                    enabled = !uiState.isProcessing,
+                    onClick = { 
+                        if (amountOrQuantity.isNotBlank()) {
+                            viewModel.startFundDonation(post.id, amountOrQuantity)
+                        }
+                    },
+                    enabled = !uiState.isProcessing && amountOrQuantity.isNotBlank(),
                     modifier = Modifier.fillMaxWidth().height(55.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -152,13 +227,17 @@ fun DonationSheetContent(
                         contentColor = Color.Black
                     )
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Payments, 
-                        contentDescription = null, 
-                        tint = Color.Black
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Donate Now", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    if (uiState.isProcessing) {
+                        CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(24.dp))
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Payments, 
+                            contentDescription = null, 
+                            tint = Color.Black
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Donate Now", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
                 }
             }
             is NeedItem -> {

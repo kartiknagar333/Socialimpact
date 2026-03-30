@@ -4,6 +4,7 @@ import com.example.socialimpact.di.qualifier.EmailAuth
 import com.example.socialimpact.di.qualifier.GoogleAuth
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.functions.FirebaseFunctions
 import dagger.Module
 import dagger.Provides
 import javax.inject.Singleton
@@ -23,6 +24,11 @@ class FirebaseModule {
     @Singleton
     fun provideFirestore(): FirebaseFirestore =
         FirebaseFirestore.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseFunctions(): FirebaseFunctions =
+        FirebaseFunctions.getInstance()
 
     @Provides
     @EmailAuth

@@ -199,7 +199,7 @@ private fun DonationItemCard(
 
                             Text(
                                 text = "${item.quantity} ${post.getUnitByName(item.name)}",
-                                color = Color.White,
+                                color = Color.White.copy(0.7f),
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(start = 8.dp)
                             )
@@ -218,13 +218,13 @@ private fun DonationItemCard(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
-                                tint = Color.White.copy(0.9f),
+                                tint =  MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp) // Adjust size as needed
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Received",
-                                color = Color.White.copy(0.9f),
+                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 10.sp
                             )

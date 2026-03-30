@@ -206,13 +206,17 @@ class PostRepositoryImpl @Inject constructor(
             firestore.runTransaction { transaction ->
                 Log.d(TAG, "submitItemDonation: Transaction started")
                 val postRef = firestore.collection("posts").document(postId)
+                val donationRef = postRef.collection("donations").document(donorUid)
+                
+                // PERFORM ALL READS FIRST
                 val postSnapshot = transaction.get(postRef)
+                val existingDonation = transaction.get(donationRef)
 
                 if (!postSnapshot.exists()) {
                     throw Exception("Post document does not exist at path: ${postRef.path}")
                 }
 
-                // Step 2: Update Post's pending count in dynamicNeeds array
+                // Step 2: Prepare Post's updated dynamicNeeds array
                 Log.d(TAG, "submitItemDonation: Fetching dynamicNeeds from post")
                 @Suppress("UNCHECKED_CAST")
                 val dynamicNeeds = postSnapshot.get("dynamicNeeds") as? List<Map<String, Any>>
@@ -243,15 +247,7 @@ class PostRepositoryImpl @Inject constructor(
                     throw Exception("Requested item not found in post")
                 }
 
-                Log.d(TAG, "submitItemDonation: Updating post document with new dynamicNeeds")
-                transaction.update(postRef, "dynamicNeeds", updatedNeeds)
-
-                // Step 3: Create new Donation document in the sub-collection using donorUid as Doc ID
-                val donationRef = postRef.collection("donations").document(donorUid)
-                Log.d(TAG, "submitItemDonation: Creating donation doc at: ${donationRef.path}")
-
-                // Fetch existing items if they exist (to allow multiple items per donor)
-                val existingDonation = transaction.get(donationRef)
+                // Step 3: Prepare Donation data
                 val newDonationItem = mapOf(
                     "name" to itemName,
                     "quantity" to quantity,
@@ -259,6 +255,11 @@ class PostRepositoryImpl @Inject constructor(
                     "timestamp" to now
                 )
 
+                // PERFORM ALL WRITES LAST
+                Log.d(TAG, "submitItemDonation: Updating post document with new dynamicNeeds")
+                transaction.update(postRef, "dynamicNeeds", updatedNeeds)
+
+                Log.d(TAG, "submitItemDonation: Updating/Setting donation doc at: ${donationRef.path}")
                 if (existingDonation.exists()) {
                     @Suppress("UNCHECKED_CAST")
                     val existingNeeds = existingDonation.get("dynamicNeed") as? List<Map<String, Any>> ?: emptyList()

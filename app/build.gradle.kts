@@ -82,6 +82,9 @@ dependencies {
     // Paging 3
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.paging.compose)
+    
+    // Stripe
+    implementation(libs.stripe.android)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

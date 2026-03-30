@@ -18,6 +18,7 @@ coroutines = "1.10.2"
 firebaseFunctions = "22.1.0"
 browser = "1.9.0"
 paging = "3.4.2"
+stripe = "21.3.1"
 
 
 ksp = "2.3.5"
@@ -54,6 +55,7 @@ firebase-functions = { group = "com.google.firebase", name = "firebase-functions
 androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
 androidx-paging-runtime = { group = "androidx.paging", name = "paging-runtime-ktx", version.ref = "paging" }
 androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
+stripe-android = { group = "com.stripe", name = "stripe-android", version.ref = "stripe" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

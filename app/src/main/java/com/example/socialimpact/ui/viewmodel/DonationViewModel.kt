@@ -7,18 +7,22 @@ import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.domain.repository.HomeRepository
 import com.example.socialimpact.domain.repository.PostRepository
 import com.example.socialimpact.ui.state.DonationUiState
+import com.example.socialimpact.ui.state.StripePaymentData
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 class DonationViewModel @Inject constructor(
     private val postRepository: PostRepository,
     private val homeRepository: HomeRepository,
-    private val firebaseAuth: FirebaseAuth
+    private val firebaseAuth: FirebaseAuth,
+    private val firebaseFunctions: FirebaseFunctions
 ) : ViewModel() {
 
     companion object {
@@ -114,6 +118,78 @@ class DonationViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    /**
+     * Call the Cloud Function to initialize the Stripe Payment Intent.
+     */
+    fun startFundDonation(postId: String, amountUsd: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isProcessing = true, error = null) }
+            val currentUserId = firebaseAuth.currentUser?.uid
+            
+            if (currentUserId == null) {
+                _uiState.update { it.copy(isProcessing = false, error = "Please sign in to donate.") }
+                return@launch
+            }
+
+            if (amountUsd.toDoubleOrNull() == null || amountUsd.toDouble() <= 0) {
+                _uiState.update { it.copy(isProcessing = false, error = "Invalid amount") }
+                return@launch
+            }
+
+            try {
+                val data = hashMapOf(
+                    "postId" to postId,
+                    "donorId" to currentUserId,
+                    "amountUsd" to amountUsd
+                )
+
+                val result = firebaseFunctions
+                    .getHttpsCallable("createDonationIntent")
+                    .call(data)
+                    .await()
+
+                val response = result.data as? Map<*, *>
+                if (response != null) {
+                    val paymentIntentClientSecret = response["paymentIntentClientSecret"] as? String
+                    val ephemeralKeySecret = response["ephemeralKeySecret"] as? String
+                    val customerId = response["customerId"] as? String
+                    val publishableKey = response["publishableKey"] as? String
+
+                    if (paymentIntentClientSecret != null && publishableKey != null) {
+                        _uiState.update {
+                            it.copy(
+                                stripePaymentData = StripePaymentData(
+                                    paymentIntentClientSecret = paymentIntentClientSecret,
+                                    ephemeralKeySecret = ephemeralKeySecret ?: "",
+                                    customerId = customerId ?: "",
+                                    publishableKey = publishableKey
+                                ),
+                                isProcessing = false
+                            )
+                        }
+                    } else {
+                        _uiState.update { it.copy(isProcessing = false, error = "Invalid server response") }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "startFundDonation failed: ${e.message}", e)
+                _uiState.update { it.copy(isProcessing = false, error = e.message) }
+            }
+        }
+    }
+
+    fun handleStripeResult(isSuccess: Boolean) {
+        _uiState.update { 
+            it.copy(
+                stripePaymentData = null,
+                successMessage = if (isSuccess) "Payment Successful! Thank you." else null,
+                error = if (!isSuccess) "Payment failed or cancelled." else null
+            )
+        }
+        // If successful, we can optionally refresh the donations list, 
+        // though the webhook handles the Firestore update.
     }
     
     fun clearError() {
