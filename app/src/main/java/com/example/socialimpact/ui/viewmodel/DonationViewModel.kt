@@ -124,16 +124,19 @@ class DonationViewModel @Inject constructor(
      * Call the Cloud Function to initialize the Stripe Payment Intent.
      */
     fun startFundDonation(postId: String, amountUsd: String) {
+        Log.d(TAG, "startFundDonation: Starting for postId: $postId, amount: $amountUsd")
         viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true, error = null) }
             val currentUserId = firebaseAuth.currentUser?.uid
             
             if (currentUserId == null) {
+                Log.e(TAG, "startFundDonation: User not authenticated")
                 _uiState.update { it.copy(isProcessing = false, error = "Please sign in to donate.") }
                 return@launch
             }
 
             if (amountUsd.toDoubleOrNull() == null || amountUsd.toDouble() <= 0) {
+                Log.e(TAG, "startFundDonation: Invalid amount: $amountUsd")
                 _uiState.update { it.copy(isProcessing = false, error = "Invalid amount") }
                 return@launch
             }
@@ -145,12 +148,15 @@ class DonationViewModel @Inject constructor(
                     "amountUsd" to amountUsd
                 )
 
+                Log.d(TAG, "startFundDonation: Calling 'createDonationIntent' with data: $data")
                 val result = firebaseFunctions
                     .getHttpsCallable("createDonationIntent")
                     .call(data)
                     .await()
 
                 val response = result.data as? Map<*, *>
+                Log.d(TAG, "startFundDonation: Received response: $response")
+                
                 if (response != null) {
                     val paymentIntentClientSecret = response["paymentIntentClientSecret"] as? String
                     val ephemeralKeySecret = response["ephemeralKeySecret"] as? String
@@ -158,6 +164,7 @@ class DonationViewModel @Inject constructor(
                     val publishableKey = response["publishableKey"] as? String
 
                     if (paymentIntentClientSecret != null && publishableKey != null) {
+                        Log.d(TAG, "startFundDonation: Successfully parsed response. Updating UI state.")
                         _uiState.update {
                             it.copy(
                                 stripePaymentData = StripePaymentData(
@@ -170,8 +177,12 @@ class DonationViewModel @Inject constructor(
                             )
                         }
                     } else {
+                        Log.e(TAG, "startFundDonation: Missing critical data in response (clientSecret or publishableKey)")
                         _uiState.update { it.copy(isProcessing = false, error = "Invalid server response") }
                     }
+                } else {
+                    Log.e(TAG, "startFundDonation: Response data is null")
+                    _uiState.update { it.copy(isProcessing = false, error = "Empty server response") }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "startFundDonation failed: ${e.message}", e)
@@ -180,16 +191,15 @@ class DonationViewModel @Inject constructor(
         }
     }
 
-    fun handleStripeResult(isSuccess: Boolean) {
+    fun handleStripeResult(isSuccess: Boolean, errorMsg: String? = null) {
+        Log.d(TAG, "handleStripeResult: isSuccess=$isSuccess, errorMsg=$errorMsg")
         _uiState.update { 
             it.copy(
                 stripePaymentData = null,
                 successMessage = if (isSuccess) "Payment Successful! Thank you." else null,
-                error = if (!isSuccess) "Payment failed or cancelled." else null
+                error = if (!isSuccess) (errorMsg ?: "Payment failed or cancelled.") else null
             )
         }
-        // If successful, we can optionally refresh the donations list, 
-        // though the webhook handles the Firestore update.
     }
     
     fun clearError() {

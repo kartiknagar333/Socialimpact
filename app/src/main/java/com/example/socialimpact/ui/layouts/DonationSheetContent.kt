@@ -1,5 +1,6 @@
 package com.example.socialimpact.ui.layouts
 
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.horizontalScroll
@@ -29,6 +30,8 @@ import com.stripe.android.PaymentConfiguration
 import com.stripe.android.paymentsheet.PaymentSheet
 import com.stripe.android.paymentsheet.rememberPaymentSheet
 
+private const val TAG = "DonationSheetContent"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DonationSheetContent(
@@ -47,22 +50,27 @@ fun DonationSheetContent(
 
     // Stripe PaymentSheet initialization
     val paymentSheet = rememberPaymentSheet { result ->
+        Log.d(TAG, "PaymentSheet result: $result")
         when (result) {
             is com.stripe.android.paymentsheet.PaymentSheetResult.Completed -> {
+                Log.d(TAG, "Payment completed successfully")
                 viewModel.handleStripeResult(true)
                 onClose()
             }
             is com.stripe.android.paymentsheet.PaymentSheetResult.Failed -> {
-                viewModel.handleStripeResult(false)
+                Log.e(TAG, "Payment failed: ${result.error.message}", result.error)
+                viewModel.handleStripeResult(false, result.error.localizedMessage)
             }
             is com.stripe.android.paymentsheet.PaymentSheetResult.Canceled -> {
-                viewModel.handleStripeResult(false)
+                Log.w(TAG, "Payment canceled by user")
+                viewModel.handleStripeResult(false, "Payment cancelled.")
             }
         }
     }
 
     LaunchedEffect(uiState.stripePaymentData) {
         uiState.stripePaymentData?.let { data ->
+            Log.d(TAG, "Initializing PaymentSheet with data: $data")
             PaymentConfiguration.init(com.google.firebase.Firebase.app.applicationContext, data.publishableKey)
             
             val customerConfig = PaymentSheet.CustomerConfiguration(

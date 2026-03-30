@@ -170,7 +170,7 @@ exports.stripeWebhook = onRequest(
 );
 
 exports.createDonationIntent = onCall(
-    { secrets: ["STRIPE_SECRET_KEY"] },
+    { secrets: ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY"] },
     async (request) => {
         const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
         const auth = request.auth;
@@ -237,7 +237,7 @@ exports.createDonationIntent = onCall(
                 paymentIntentClientSecret: paymentIntent.client_secret,
                 ephemeralKeySecret: ephemeralKey.secret,
                 customerId: customerId,
-                publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || "pk_test_51Px9X8I77L0W9BvG..." // Replace with yours or pass via env
+                publishableKey: process.env.STRIPE_PUBLISHABLE_KEY // Taken from Firebase Secrets
             };
 
         } catch (error) {
