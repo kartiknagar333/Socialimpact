@@ -9,6 +9,7 @@ import com.example.socialimpact.domain.repository.PostRepository
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -65,10 +66,11 @@ class PostRepositoryImpl @Inject constructor(
     override fun getDonations(postId: String): Flow<Result<List<Donation>>> = flow {
         try {
             Log.d(TAG, "getDonations: Fetching donations for postId: $postId")
-            
+
             val snapshot = firestore.collection("posts")
                 .document(postId)
                 .collection("donations")
+                .orderBy("last_donated", Query.Direction.DESCENDING)
                 .get()
                 .await()
 
@@ -183,5 +185,102 @@ class PostRepositoryImpl @Inject constructor(
                 trySend(post)
             }
         awaitClose { listener.remove() }
+    }.flowOn(Dispatchers.IO)
+
+    override fun submitItemDonation(
+        postId: String,
+        donorUid: String,
+        donorProfilePath: String,
+        itemName: String,
+        quantity: String
+    ): Flow<Result<Unit>> = flow {
+        try {
+            Log.d(TAG, "submitItemDonation: Started. PostId: $postId, DonorUid: $donorUid, Item: $itemName, Qty: $quantity")
+            
+            // Step 1: Verify donor document reference
+            Log.d(TAG, "submitItemDonation: Creating donor reference at path: $donorProfilePath")
+            val donorRef = firestore.document(donorProfilePath)
+            
+            val now = Timestamp.now()
+
+            firestore.runTransaction { transaction ->
+                Log.d(TAG, "submitItemDonation: Transaction started")
+                val postRef = firestore.collection("posts").document(postId)
+                val postSnapshot = transaction.get(postRef)
+
+                if (!postSnapshot.exists()) {
+                    throw Exception("Post document does not exist at path: ${postRef.path}")
+                }
+
+                // Step 2: Update Post's pending count in dynamicNeeds array
+                Log.d(TAG, "submitItemDonation: Fetching dynamicNeeds from post")
+                @Suppress("UNCHECKED_CAST")
+                val dynamicNeeds = postSnapshot.get("dynamicNeeds") as? List<Map<String, Any>>
+                
+                if (dynamicNeeds == null) {
+                    Log.e(TAG, "submitItemDonation: 'dynamicNeeds' field is missing or not a list in post document")
+                    throw Exception("Post is missing the 'dynamicNeeds' field")
+                }
+
+                Log.d(TAG, "submitItemDonation: Iterating dynamicNeeds to find item: $itemName")
+                var itemFound = false
+                val updatedNeeds = dynamicNeeds.map { need ->
+                    if (need["name"] == itemName) {
+                        itemFound = true
+                        val currentPending = (need["pending"]?.toString() ?: "0").toDoubleOrNull() ?: 0.0
+                        val donatedQty = quantity.toDoubleOrNull() ?: 0.0
+                        Log.d(TAG, "submitItemDonation: Found item. Current pending: $currentPending, New pending: ${currentPending + donatedQty}")
+                        need.toMutableMap().apply {
+                            this["pending"] = (currentPending + donatedQty).toString()
+                        }
+                    } else {
+                        need
+                    }
+                }
+
+                if (!itemFound) {
+                    Log.e(TAG, "submitItemDonation: Item '$itemName' not found in post's dynamicNeeds list")
+                    throw Exception("Requested item not found in post")
+                }
+
+                Log.d(TAG, "submitItemDonation: Updating post document with new dynamicNeeds")
+                transaction.update(postRef, "dynamicNeeds", updatedNeeds)
+
+                // Step 3: Create new Donation document in the sub-collection using donorUid as Doc ID
+                val donationRef = postRef.collection("donations").document(donorUid)
+                Log.d(TAG, "submitItemDonation: Creating donation doc at: ${donationRef.path}")
+
+                // Fetch existing items if they exist (to allow multiple items per donor)
+                val existingDonation = transaction.get(donationRef)
+                val newDonationItem = mapOf(
+                    "name" to itemName,
+                    "quantity" to quantity,
+                    "ispending" to true,
+                    "timestamp" to now
+                )
+
+                if (existingDonation.exists()) {
+                    @Suppress("UNCHECKED_CAST")
+                    val existingNeeds = existingDonation.get("dynamicNeed") as? List<Map<String, Any>> ?: emptyList()
+                    val updatedNeedsList = existingNeeds + newDonationItem
+                    transaction.update(donationRef, "dynamicNeed", updatedNeedsList)
+                    transaction.update(donationRef, "last_donated", now)
+                } else {
+                    val donationData = mapOf(
+                        "user_ref" to donorRef,
+                        "last_donated" to now,
+                        "dynamicNeed" to listOf(newDonationItem)
+                    )
+                    transaction.set(donationRef, donationData)
+                }
+                Log.d(TAG, "submitItemDonation: Transaction block finished successfully")
+            }.await()
+            
+            Log.d(TAG, "submitItemDonation: Transaction committed successfully")
+            emit(Result.success(Unit))
+        } catch (e: Exception) {
+            Log.e(TAG, "submitItemDonation: FAILED. Error: ${e.message}", e)
+            emit(Result.failure(e))
+        }
     }.flowOn(Dispatchers.IO)
 }

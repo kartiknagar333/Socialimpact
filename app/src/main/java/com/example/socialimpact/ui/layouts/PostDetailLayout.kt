@@ -2,18 +2,11 @@ package com.example.socialimpact.ui.layouts
 
 import android.content.Intent
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,21 +20,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.socialimpact.domain.model.Donation
 import com.example.socialimpact.domain.model.HelpRequestPost
-import com.example.socialimpact.domain.model.NeedItem
 import com.example.socialimpact.ui.activity.ProfileActivity
 import com.example.socialimpact.ui.components.GlassyAuthBackground
 import com.example.socialimpact.ui.viewmodel.DonationViewModel
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -64,7 +51,6 @@ fun SharedTransitionScope.PostDetailLayout(
     var showHistorySheet by remember { mutableStateOf(false) }
     
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val historySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
 
     LaunchedEffect(post.id) {
@@ -98,9 +84,7 @@ fun SharedTransitionScope.PostDetailLayout(
                                 "person" -> Icons.Default.Person
                                 "ngo" -> Icons.Default.Groups
                                 "corporation" -> Icons.Default.Business
-                                else -> {
-                                    Icons.Default.Person
-                                }
+                                else -> Icons.Default.Person
                             }
                             Icon(
                                 imageVector = profileIcon,
@@ -133,8 +117,7 @@ fun SharedTransitionScope.PostDetailLayout(
         },
         floatingActionButton = {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -144,9 +127,8 @@ fun SharedTransitionScope.PostDetailLayout(
                     containerColor = MaterialTheme.colorScheme.onBackground,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = CircleShape,
-                    icon = { Icon(Icons.Default.VolunteerActivism, contentDescription = null) },
+                    icon = { Icon(Icons.Default.History, contentDescription = null) },
                     text = { Text("Donations", fontWeight = FontWeight.Bold) }
-
                 )
 
                 // Right side: Donate Button
@@ -334,6 +316,7 @@ fun SharedTransitionScope.PostDetailLayout(
                         BottomSheetDefaults.DragHandle(color = Color.White)
                         DonationSheetContent(
                             post = displayPost,
+                            viewModel = donationViewModel,
                             onClose = { showDonateSheet = false }
                         )
                     }
@@ -376,438 +359,14 @@ fun SharedTransitionScope.PostDetailLayout(
 }
 
 @Composable
-private fun DonationsListSheet(
-    post: HelpRequestPost,
-    donations: List<Donation>,
-    isLoading: Boolean,
-    isMyPost: Boolean,
-    processingItems: Set<String>,
-    onMarkReceived: (String, String, String, Int) -> Unit,
-    onClose: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(bottom = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Donation History",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            modifier = Modifier.padding(8.dp)
-        )
-
-        if (isLoading) {
-            CircularProgressIndicator(color = Color.White)
-        } else if (donations.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No donations yet", color = Color.White.copy(0.7f))
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(donations) { donation ->
-                    DonationItemCard(
-                        post = post,
-                        donation = donation, 
-                        isMyPost = isMyPost,
-                        processingItems = processingItems,
-                        onMarkReceived = { itemName, quantity, itemIndex -> 
-                            onMarkReceived(donation.id, itemName, quantity, itemIndex) 
-                        }
-                    )
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        TextButton(onClick = onClose) {
-            Text("Close", color = Color.White)
-        }
-    }
-}
-
-@Composable
-private fun DonationItemCard(
-    post: HelpRequestPost,
-    donation: Donation, 
-    isMyPost: Boolean,
-    processingItems: Set<String>,
-    onMarkReceived: (String, String, Int) -> Unit
-) {
-    var showConfirmDialog by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
-
-    if (showConfirmDialog != null) {
-        AlertDialog(
-            onDismissRequest = { showConfirmDialog = null },
-            title = { Text("Confirm Receipt") },
-            text = { Text("Are you sure you have received ${showConfirmDialog?.second} of ${showConfirmDialog?.first}?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showConfirmDialog?.let { onMarkReceived(it.first, it.second, it.third) }
-                    showConfirmDialog = null
-                }) { Text("Yes, Received", color = MaterialTheme.colorScheme.tertiary) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showConfirmDialog = null }) { Text("Cancel", color = MaterialTheme.colorScheme.tertiary) }
-            }
-        )
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.1f)),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    modifier = Modifier.size(32.dp).clip(CircleShape),
-                    color = Color.White.copy(0.2f)
-                ) {
-                    val icon = when (donation.userType.lowercase()) {
-                        "person" -> Icons.Default.Person
-                        "ngo" -> Icons.Default.Groups
-                        else -> Icons.Default.Business
-                    }
-                    Icon(icon, null, modifier = Modifier.padding(6.dp), tint = Color.White)
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(donation.userName, color = Color.White, fontWeight = FontWeight.Bold)
-                    Text(donation.userType, color = Color.White.copy(0.7f), style = MaterialTheme.typography.bodySmall)
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            donation.dynamicNeed.forEachIndexed { index, item ->
-                val isProcessing = processingItems.contains("${donation.id}-$index")
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = item.name,
-                        color = Color.White,
-                        modifier = Modifier.weight(1f)
-                    )
-                    
-                    if (isMyPost && item.isPending) {
-                        if (isProcessing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp).padding(end = 8.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            TextButton(
-                                onClick = { showConfirmDialog = Triple(item.name, item.quantity, index) },
-                                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-                                modifier = Modifier.height(32.dp)
-                            ) {
-                                Text(
-                                    text = "Approve ${item.quantity} ${post.getUnitByName(item.name)}",
-                                    color = Color.Black,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier
-                                        .background(
-                                            color = MaterialTheme.colorScheme.primary,
-                                            shape = CircleShape
-                                        )
-                                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                    } else if (!isMyPost && item.isPending) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .background(
-                                    color = Color.Black.copy(alpha = 0.3f),
-                                    shape = CircleShape
-                                )
-                                .padding(horizontal = 8.dp, vertical = 0.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.History,
-                                contentDescription = null,
-                                tint = Color.White.copy(0.7f),
-                                modifier = Modifier.size(16.dp) // Adjust size as needed
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Pending",
-                                color = Color.White.copy(0.7f),
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 10.sp
-                            )
-
-                            Text(
-                                text = "${item.quantity} ${post.getUnitByName(item.name)}",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
-
-                    } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .background(
-                                    color = Color.Black.copy(alpha = 0.3f),
-                                    shape = CircleShape
-                                )
-                                .padding(horizontal = 8.dp, vertical = 0.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = Color.White.copy(0.7f),
-                                modifier = Modifier.size(16.dp) // Adjust size as needed
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Received",
-                                color = Color.White.copy(0.7f),
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 10.sp
-                            )
-
-                            Text(
-                                text = "${item.quantity} ${post.getUnitByName(item.name)}",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
-                    }
-                    
-
-                }
-            }
-            
-            donation.lastDonated?.let {
-                Text(
-                    text = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(it.toDate()),
-                    color = Color.White.copy(0.5f),
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.align(Alignment.End)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DonationSheetContent(
-    post: HelpRequestPost,
-    onClose: () -> Unit
-) {
-    var selection by remember { 
-        mutableStateOf<Any?>(
-            if (post.fundAmount.isNotEmpty()) "fund" else post.dynamicNeeds.firstOrNull()
-        ) 
-    }
-    var amountOrQuantity by remember { mutableStateOf("") }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(24.dp)
-            .padding(bottom = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.Favorite,
-            contentDescription = null,
-            modifier = Modifier.size(48.dp),
-            tint = Color.White
-        )
-        
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "Make a Donation",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            val chipColors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = Color.White,
-                selectedLabelColor = MaterialTheme.colorScheme.tertiary,
-                labelColor = Color.White
-            )
-
-            if (post.fundAmount.isNotEmpty()) {
-                FilterChip(
-                    selected = selection == "fund",
-                    onClick = { 
-                        selection = "fund"
-                        amountOrQuantity = ""
-                    },
-                    label = { Text("Fund", modifier = Modifier.padding(horizontal = 8.dp)) },
-                    leadingIcon = null,
-                    trailingIcon = null,
-                    shape = CircleShape,
-                    modifier = Modifier.height(48.dp),
-                    colors = chipColors,
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = selection == "fund",
-                        borderColor = Color.White,
-                        selectedBorderColor = Color.White
-                    )
-                )
-            }
-
-            post.dynamicNeeds.forEach { item ->
-                FilterChip(
-                    selected = selection == item,
-                    onClick = { 
-                        selection = item
-                        amountOrQuantity = ""
-                    },
-                    label = { Text(item.name, modifier = Modifier.padding(horizontal = 8.dp)) },
-                    leadingIcon = null,
-                    trailingIcon = null,
-                    shape = CircleShape,
-                    modifier = Modifier.height(48.dp),
-                    colors = chipColors,
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = selection == item,
-                        borderColor = Color.White,
-                        selectedBorderColor = Color.White
-                    )
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        when (val selected = selection) {
-            "fund" -> {
-                Text(
-                    text = "Money goes through Stripe securely to ensure direct impact.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 20.sp
-                )
-                
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Button(
-                    onClick = { /* TODO: Stripe Payment */ },
-                    modifier = Modifier.fillMaxWidth().height(55.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.Black
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Payments, 
-                        contentDescription = null, 
-                        tint = Color.Black
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Donate Now", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                }
-            }
-            is NeedItem -> {
-                Text(
-                    text = "Physical donations will be officially recorded once received. Your contribution remains in 'Pending' status until confirmation by the recipient.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 20.sp
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                AnimatedVisibility(
-                    visible = selection is NeedItem,
-                    enter = slideInHorizontally(animationSpec = tween(durationMillis = 1000)) { -it } + fadeIn()
-                ) {
-                    val inputTextStyle = LocalTextStyle.current.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
-                    )
-
-                    OutlinedTextField(
-                        value = amountOrQuantity,
-                        onValueChange = { amountOrQuantity = it },
-                        label = {
-                            Text("Quantity", color = Color.White, fontWeight = FontWeight.SemiBold)
-                        },
-                        prefix = {
-                            Text(
-                                "${selected.unit} ",
-                                style = inputTextStyle // 👈 SAME style
-                            )
-                        },
-                        textStyle = inputTextStyle,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.White,
-                            unfocusedBorderColor = Color.LightGray,
-                            focusedLabelColor = Color.White,
-                            unfocusedLabelColor = Color.LightGray,
-                        )
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Button(
-                    onClick = { /* TODO: Item Donation Submission */ },
-                    modifier = Modifier.fillMaxWidth().height(55.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.Black
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Inventory, 
-                        contentDescription = null, 
-                        tint = Color.Black
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Confirm Donation", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        TextButton(onClick = onClose) {
-            Text("Cancel", color = Color.White, fontWeight = FontWeight.Medium)
-        }
-    }
-}
-
-@Composable
 private fun DetailSection(icon: ImageVector, label: String, value: String) {
     if (value.isBlank()) return
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.outline); Spacer(modifier = Modifier.width(16.dp)); Column { Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline); Text(text = value, style = MaterialTheme.typography.bodyLarge) } }
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.outline)
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+            Text(text = value, style = MaterialTheme.typography.bodyLarge)
+        }
+    }
 }

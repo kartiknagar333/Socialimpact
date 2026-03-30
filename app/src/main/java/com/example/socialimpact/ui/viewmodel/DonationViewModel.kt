@@ -4,8 +4,10 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.socialimpact.domain.model.HelpRequestPost
+import com.example.socialimpact.domain.repository.HomeRepository
 import com.example.socialimpact.domain.repository.PostRepository
 import com.example.socialimpact.ui.state.DonationUiState
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,7 +16,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 class DonationViewModel @Inject constructor(
-    private val postRepository: PostRepository
+    private val postRepository: PostRepository,
+    private val homeRepository: HomeRepository,
+    private val firebaseAuth: FirebaseAuth
 ) : ViewModel() {
 
     companion object {
@@ -58,7 +62,7 @@ class DonationViewModel @Inject constructor(
     }
 
     fun markItemAsReceived(postId: String, donationId: String, itemName: String, quantity: String, itemIndex: Int) {
-        val key = "$donationId-$itemIndex" // Unique key using index
+        val key = "$donationId-$itemIndex"
         viewModelScope.launch {
             _processingItems.update { it + key }
             postRepository.markDonationItemReceived(postId, donationId, itemName, quantity, itemIndex).collect { result ->
@@ -75,8 +79,48 @@ class DonationViewModel @Inject constructor(
             }
         }
     }
+
+    fun submitDonation(postId: String, itemName: String, quantity: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isProcessing = true) }
+            
+            // Fix: Use FirebaseAuth as the source of truth for the donor UID
+            val currentUserId = firebaseAuth.currentUser?.uid
+            val profile = homeRepository.getLocalProfile()
+            
+            if (currentUserId == null || profile == null) {
+                _uiState.update { it.copy(isProcessing = false, error = "Authentication or Profile not found") }
+                return@launch
+            }
+
+            // Path: /profile/{usertype}/{username}/{user_id}
+            val donorPath = "profile/${profile.type.name.lowercase()}/${profile.fullName.trim()}/$currentUserId"
+
+            postRepository.submitItemDonation(
+                postId = postId,
+                donorUid = currentUserId,
+                donorProfilePath = donorPath,
+                itemName = itemName,
+                quantity = quantity
+            ).collect { result ->
+                result.fold(
+                    onSuccess = {
+                        _uiState.update { it.copy(isProcessing = false, successMessage = "Donation submitted!") }
+                        fetchDonations(postId)
+                    },
+                    onFailure = { e ->
+                        _uiState.update { it.copy(isProcessing = false, error = e.message) }
+                    }
+                )
+            }
+        }
+    }
     
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    fun clearSuccess() {
+        _uiState.update { it.copy(successMessage = null) }
     }
 }
