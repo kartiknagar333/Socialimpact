@@ -4,10 +4,10 @@ import android.util.Log
 import com.example.socialimpact.domain.model.Donation
 import com.example.socialimpact.domain.model.DonationNeedItem
 import com.example.socialimpact.domain.model.HelpRequestPost
-import com.example.socialimpact.domain.model.NeedItem
 import com.example.socialimpact.domain.repository.PostRepository
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.Dispatchers
@@ -196,11 +196,16 @@ class PostRepositoryImpl @Inject constructor(
     ): Flow<Result<Unit>> = flow {
         try {
             Log.d(TAG, "submitItemDonation: Started. PostId: $postId, DonorUid: $donorUid, Item: $itemName, Qty: $quantity")
+            Log.d(TAG, "submitItemDonation: Using donorProfilePath: '$donorProfilePath'")
             
             // Step 1: Verify donor document reference
-            Log.d(TAG, "submitItemDonation: Creating donor reference at path: $donorProfilePath")
+            val segments = donorProfilePath.split("/").filter { it.isNotBlank() }
+            if (segments.size % 2 != 0) {
+                Log.e(TAG, "submitItemDonation: Invalid donorProfilePath (odd segments): $donorProfilePath")
+                throw Exception("Invalid donor profile path")
+            }
+
             val donorRef = firestore.document(donorProfilePath)
-            
             val now = Timestamp.now()
 
             firestore.runTransaction { transaction ->
@@ -211,29 +216,22 @@ class PostRepositoryImpl @Inject constructor(
                 // PERFORM ALL READS FIRST
                 val postSnapshot = transaction.get(postRef)
                 val existingDonation = transaction.get(donationRef)
+                val donorSnapshot = transaction.get(donorRef)
 
                 if (!postSnapshot.exists()) {
-                    throw Exception("Post document does not exist at path: ${postRef.path}")
+                    throw Exception("Post document does not exist")
                 }
 
                 // Step 2: Prepare Post's updated dynamicNeeds array
-                Log.d(TAG, "submitItemDonation: Fetching dynamicNeeds from post")
                 @Suppress("UNCHECKED_CAST")
-                val dynamicNeeds = postSnapshot.get("dynamicNeeds") as? List<Map<String, Any>>
+                val dynamicNeeds = postSnapshot.get("dynamicNeeds") as? List<Map<String, Any>> ?: emptyList()
                 
-                if (dynamicNeeds == null) {
-                    Log.e(TAG, "submitItemDonation: 'dynamicNeeds' field is missing or not a list in post document")
-                    throw Exception("Post is missing the 'dynamicNeeds' field")
-                }
-
-                Log.d(TAG, "submitItemDonation: Iterating dynamicNeeds to find item: $itemName")
                 var itemFound = false
                 val updatedNeeds = dynamicNeeds.map { need ->
                     if (need["name"] == itemName) {
                         itemFound = true
                         val currentPending = (need["pending"]?.toString() ?: "0").toDoubleOrNull() ?: 0.0
                         val donatedQty = quantity.toDoubleOrNull() ?: 0.0
-                        Log.d(TAG, "submitItemDonation: Found item. Current pending: $currentPending, New pending: ${currentPending + donatedQty}")
                         need.toMutableMap().apply {
                             this["pending"] = (currentPending + donatedQty).toString()
                         }
@@ -243,7 +241,6 @@ class PostRepositoryImpl @Inject constructor(
                 }
 
                 if (!itemFound) {
-                    Log.e(TAG, "submitItemDonation: Item '$itemName' not found in post's dynamicNeeds list")
                     throw Exception("Requested item not found in post")
                 }
 
@@ -256,10 +253,11 @@ class PostRepositoryImpl @Inject constructor(
                 )
 
                 // PERFORM ALL WRITES LAST
-                Log.d(TAG, "submitItemDonation: Updating post document with new dynamicNeeds")
+                
+                // 1. Update Post document
                 transaction.update(postRef, "dynamicNeeds", updatedNeeds)
 
-                Log.d(TAG, "submitItemDonation: Updating/Setting donation doc at: ${donationRef.path}")
+                // 2. Update/Set Donation document
                 if (existingDonation.exists()) {
                     @Suppress("UNCHECKED_CAST")
                     val existingNeeds = existingDonation.get("dynamicNeed") as? List<Map<String, Any>> ?: emptyList()
@@ -274,6 +272,16 @@ class PostRepositoryImpl @Inject constructor(
                     )
                     transaction.set(donationRef, donationData)
                 }
+
+                // 3. Update Donor's profile with postId in 'donations' array
+                Log.d(TAG, "submitItemDonation: Updating donor profile donations array for post $postId")
+                if (donorSnapshot.exists()) {
+                    transaction.update(donorRef, "donations", FieldValue.arrayUnion(postId))
+                } else {
+                    Log.w(TAG, "submitItemDonation: Donor profile doc did not exist at ${donorRef.path}, creating it.")
+                    transaction.set(donorRef, mapOf("donations" to listOf(postId)), com.google.firebase.firestore.SetOptions.merge())
+                }
+
                 Log.d(TAG, "submitItemDonation: Transaction block finished successfully")
             }.await()
             
@@ -281,6 +289,55 @@ class PostRepositoryImpl @Inject constructor(
             emit(Result.success(Unit))
         } catch (e: Exception) {
             Log.e(TAG, "submitItemDonation: FAILED. Error: ${e.message}", e)
+            emit(Result.failure(e))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    override fun getDonatedPosts(profilePath: String): Flow<Result<List<HelpRequestPost>>> = flow {
+        try {
+            Log.d(TAG, "getDonatedPosts: Fetching posts for profile path: '$profilePath'")
+            
+            val segments = profilePath.split("/").filter { it.isNotBlank() }
+            if (segments.size % 2 != 0) {
+                Log.e(TAG, "getDonatedPosts: Invalid path (odd segments: ${segments.size}): $profilePath")
+                emit(Result.success(emptyList<HelpRequestPost>()))
+                return@flow
+            }
+
+            // 1. Get the list of post IDs from the user's profile
+            val donorDoc = firestore.document(profilePath).get().await()
+            
+            if (!donorDoc.exists()) {
+                Log.w(TAG, "getDonatedPosts: Profile document does not exist at $profilePath")
+                emit(Result.success(emptyList<HelpRequestPost>()))
+                return@flow
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            val postIds = donorDoc.get("donations") as? List<String> ?: emptyList()
+            Log.d(TAG, "getDonatedPosts: Found ${postIds.size} post IDs in profile: $postIds")
+            
+            if (postIds.isEmpty()) {
+                emit(Result.success(emptyList<HelpRequestPost>()))
+                return@flow
+            }
+
+            // 2. Fetch all posts that match these IDs
+            // Firestore 'whereIn' is limited to 30 items
+            val snapshot = firestore.collection("posts")
+                .whereIn("id", postIds.take(30)) 
+                .get()
+                .await()
+                
+            Log.d(TAG, "getDonatedPosts: Query returned ${snapshot.size()} documents from 'posts' collection")
+            
+            val posts = snapshot.toObjects(HelpRequestPost::class.java)
+                .sortedByDescending { it.timestamp }
+                
+            Log.d(TAG, "getDonatedPosts: Successfully mapped ${posts.size} posts")
+            emit(Result.success(posts))
+        } catch (e: Exception) {
+            Log.e(TAG, "getDonatedPosts error: ${e.message}", e)
             emit(Result.failure(e))
         }
     }.flowOn(Dispatchers.IO)

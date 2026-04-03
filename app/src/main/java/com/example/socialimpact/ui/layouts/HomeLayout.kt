@@ -149,7 +149,6 @@ fun HomeLayout(
                             post = post,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onClick = { onPostClick(post) },
-                            isMyPost = false
                         )
                     }
                 }

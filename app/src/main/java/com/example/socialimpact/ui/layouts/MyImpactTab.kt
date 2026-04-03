@@ -73,7 +73,6 @@ fun MyImpactTab(
                         post = post,
                         animatedVisibilityScope = animatedVisibilityScope,
                         onClick = { onPostClick(post) },
-                        isMyPost = true
                     )
                 }
             }

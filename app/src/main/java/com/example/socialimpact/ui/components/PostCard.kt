@@ -31,7 +31,6 @@ fun SharedTransitionScope.PostCard(
     post: HelpRequestPost,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
-    isMyPost: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(

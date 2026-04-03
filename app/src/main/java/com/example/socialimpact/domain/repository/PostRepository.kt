@@ -12,5 +12,5 @@ interface PostRepository {
     fun markDonationItemReceived(postId: String, donationId: String, itemName: String, quantity: String, itemIndex: Int): Flow<Result<Unit>>
     fun observePost(postId: String): Flow<HelpRequestPost?>
     fun submitItemDonation(postId: String, donorUid: String, donorProfilePath: String, itemName: String, quantity: String): Flow<Result<Unit>>
-
+    fun getDonatedPosts(profilePath: String): Flow<Result<List<HelpRequestPost>>>
 }

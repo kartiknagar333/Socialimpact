@@ -68,25 +68,18 @@ class HomeRepositoryImpl @Inject constructor(
 
             val currentTime = System.currentTimeMillis()
 
-            // 1. Set data at main account document with created date
-            val accountData = profileData.toMutableMap()
-            accountData["createdAt"] = currentTime
-            
-            firestore.collection("account").document(uid).set(accountData).await()
+            // 1. Set data at main account document
+            firestore.collection("account").document(uid).set(profileData + ("createdAt" to currentTime)).await()
             Log.d(TAG, "saveProfile: Account document created")
 
-            // 2. Handle type-specific path with last updated
+            // 2. Handle type-specific path
             val specificPath = getSpecificPath(type.name, fullName, uid)
             Log.d(TAG, "saveProfile: Specific path: $specificPath")
-
-
-            val specificData = profileData.toMutableMap()
-            specificData["lastUpdated"] = currentTime
             
-            firestore.document(specificPath).set(specificData).await()
+            firestore.document(specificPath).set(profileData + ("lastUpdated" to currentTime)).await()
             Log.d(TAG, "saveProfile: Specific document created")
 
-            // Update local storage via PreferenceManager
+            // Update local storage
             preferenceManager.saveProfileLocally(
                 uid = uid,
                 type = type.name,
@@ -98,7 +91,7 @@ class HomeRepositoryImpl @Inject constructor(
                 location = location,
                 bio = bio
             )
-            Log.d(TAG, "saveProfile: Local storage updated")
+            Log.d(TAG, "saveProfile: Local storage updated with UID $uid")
 
             emit(Result.success(Unit))
 
@@ -113,47 +106,36 @@ class HomeRepositoryImpl @Inject constructor(
     ): Flow<Result<Unit>> = flow {
         try {
             val currentTime = System.currentTimeMillis()
+            val currentUid = firebaseAuth.currentUser?.uid ?: throw Exception("User not authenticated")
             
-            // Get old state before update
             val oldProfile = getLocalProfile() ?: throw Exception("Profile not found locally")
-            val uid = oldProfile.uid
-            val oldName = oldProfile.fullName
-            val oldSpecificPath = getSpecificPath(oldProfile.type.name, oldName, uid)
+            val uid = oldProfile.uid.ifBlank { currentUid }
+            val oldSpecificPath = getSpecificPath(oldProfile.type.name, oldProfile.fullName, uid)
+
+            val updatedDataMap = profileData.toMutableMap()
+            if (!updatedDataMap.containsKey("uid")) updatedDataMap["uid"] = uid
 
             // 1. Update main account document
             firestore.collection("account").document(uid).update(profileData).await()
 
-            // 2. Sync local storage with new values
-            preferenceManager.updateLocalProfile(profileData)
+            // 2. Sync local storage
+            preferenceManager.updateLocalProfile(updatedDataMap)
 
-            // 3. Get new state to calculate new path
+            // 3. Update specific path document
             val updatedProfile = getLocalProfile()!!
-            val newTypeName = (profileData["type"] as? String ?: updatedProfile.type.name)
-            val newName = profileData["fullName"] as? String ?: updatedProfile.fullName
-            val newSpecificPath = getSpecificPath(newTypeName, newName, uid)
-
-            val obj = UserProfile.fromMap(uid, profileData)
+            val newSpecificPath = getSpecificPath(updatedProfile.type.name, updatedProfile.fullName, uid)
 
             if (oldSpecificPath != newSpecificPath) {
-                // Path changed (Name or Type changed). Delete old and create new.
-                Log.d(TAG, "updateProfile: Path changed. Deleting old document at: $oldSpecificPath")
+                Log.d(TAG, "updateProfile: Path changed from $oldSpecificPath to $newSpecificPath")
                 firestore.document(oldSpecificPath).delete().await()
                 
-                // Fetch full data from main account to ensure specific path doc is complete
                 val fullData = firestore.collection("account").document(uid).get().await().data ?: throw Exception("Sync error")
-                val specificData = fullData.toMutableMap()
-                specificData["lastUpdated"] = currentTime
-                
-                firestore.document(newSpecificPath).set(specificData).await()
+                firestore.document(newSpecificPath).set(fullData + ("lastUpdated" to currentTime)).await()
             } else {
-                // Path is the same. Update the document with updated data.
-                val updateMap = profileData.toMutableMap()
-                updateMap["lastUpdated"] = currentTime
-                firestore.document(newSpecificPath).set(obj).await()
+                firestore.document(newSpecificPath).update(profileData + ("lastUpdated" to currentTime)).await()
             }
 
             emit(Result.success(Unit))
-
         } catch (e: Exception) {
             Log.e(TAG, "updateProfile error: ${e.message}", e)
             emit(Result.failure(e))
@@ -161,20 +143,37 @@ class HomeRepositoryImpl @Inject constructor(
     }.flowOn(Dispatchers.IO)
 
     override fun getLocalProfile(): LocalProfile? {
-        return preferenceManager.getLocalProfile()
+        val profile = preferenceManager.getLocalProfile() ?: return null
+        
+        // Ensure UID is always present for current user
+        if (profile.uid.isBlank()) {
+            val currentUid = firebaseAuth.currentUser?.uid
+            if (currentUid != null) {
+                Log.d(TAG, "getLocalProfile: Fixing missing UID locally with: $currentUid")
+                val fixedProfile = profile.copy(uid = currentUid)
+                preferenceManager.saveProfileLocally(
+                    uid = currentUid,
+                    type = fixedProfile.type.name,
+                    fullName = fixedProfile.fullName,
+                    regId = fixedProfile.registrationId,
+                    website = fixedProfile.website,
+                    industry = fixedProfile.industry,
+                    phone = fixedProfile.phone,
+                    location = fixedProfile.location,
+                    bio = fixedProfile.bio
+                )
+                return fixedProfile
+            }
+        }
+        return profile
     }
 
-    override fun isProfileSet(): Boolean {
-        return preferenceManager.isProfileSet()
-    }
+    override fun isProfileSet(): Boolean = preferenceManager.isProfileSet()
 
     override fun getHomePosts(): Flow<PagingData<HelpRequestPost>> {
         val currentUserId = firebaseAuth.currentUser?.uid ?: ""
         return Pager(
-            config = PagingConfig(
-                pageSize = 20,
-                enablePlaceholders = false
-            ),
+            config = PagingConfig(pageSize = 20, enablePlaceholders = false),
             pagingSourceFactory = { HomePagingSource(firestore, currentUserId) }
         ).flow
     }

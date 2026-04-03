@@ -38,9 +38,11 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.socialimpact.domain.model.HelpRequestPost
 import com.example.socialimpact.domain.model.ProfileType
 import com.example.socialimpact.domain.repository.LocalProfile
+import com.example.socialimpact.ui.viewmodel.ImpactedByViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
@@ -50,6 +52,7 @@ fun ProfileLayout(
     myPosts: List<HelpRequestPost>,
     isMyProfile: Boolean,
     donationFactory: ViewModelProvider.Factory,
+    impactedByViewModel: ImpactedByViewModel = viewModel(factory = donationFactory),
     onBack: () -> Unit,
     onUploadClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -95,13 +98,14 @@ fun ProfileLayout(
                     impactScrollState = impactScrollState,
                     impactedByScrollState = impactedByScrollState,
                     headerOffsetHeightPx = headerOffsetHeightPx,
+                    impactedByViewModel = impactedByViewModel,
                     modifier = modifier
                 )
             } else {
                 PostDetailLayout(
                     post = post,
                     animatedVisibilityScope = this@AnimatedContent,
-                    isMyPost = isMyProfile,
+                    isMyPost = post.userId == profile?.uid,
                     donationFactory = donationFactory,
                     onBack = { selectedPost = null }
                 )
@@ -127,6 +131,7 @@ fun MainProfileContent(
     impactScrollState: ScrollState,
     impactedByScrollState: ScrollState,
     headerOffsetHeightPx: MutableFloatState,
+    impactedByViewModel: ImpactedByViewModel,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -240,7 +245,17 @@ fun MainProfileContent(
                     when (page) {
                         0 -> ProfileAboutTab(profile = profile, scrollState = aboutScrollState)
                         1 -> MyImpactTab(posts = myPosts, onPostClick = onPostClick, sharedTransitionScope = sharedTransitionScope, animatedVisibilityScope = animatedVisibilityScope, scrollState = impactScrollState)
-                        2 -> ImpactedByTab(scrollState = impactedByScrollState)
+                        2 -> {
+                            val profilePath = "profile/${profile.type.name.lowercase()}/${profile.fullName.trim()}/${profile.uid}"
+                            with(sharedTransitionScope) {
+                                ImpactedByTab(
+                                    profilePath = profilePath,
+                                    viewModel = impactedByViewModel,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    onPostClick = onPostClick
+                                )
+                            }
+                        }
                     }
                 }
             }
