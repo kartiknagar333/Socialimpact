@@ -35,7 +35,6 @@ import com.example.socialimpact.ui.viewmodel.DonationViewModel
 fun SharedTransitionScope.PostDetailLayout(
     post: HelpRequestPost,
     animatedVisibilityScope: AnimatedVisibilityScope,
-    isMyPost: Boolean,
     donationFactory: ViewModelProvider.Factory,
     onBack: () -> Unit
 ) {
@@ -46,7 +45,11 @@ fun SharedTransitionScope.PostDetailLayout(
     
     // Use the latest observed post data if available, otherwise use initial post
     val displayPost = observedPost ?: post
-    
+    // Check if the current user owns this post using PreferenceManager ID
+    val isMyPost = remember(post.userId) {
+        post.userId == donationViewModel.currentUserId
+    }
+
     var showDonateSheet by remember { mutableStateOf(false) }
     var showHistorySheet by remember { mutableStateOf(false) }
     

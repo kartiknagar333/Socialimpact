@@ -36,6 +36,8 @@ interface HomeRepository {
 
     fun getLocalProfile(): LocalProfile?
     
+    fun getUserId(): String
+    
     fun isProfileSet(): Boolean
 
     fun getHomePosts(): Flow<PagingData<HelpRequestPost>>

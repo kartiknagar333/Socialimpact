@@ -151,6 +151,7 @@ class HomeRepositoryImpl @Inject constructor(
             if (currentUid != null) {
                 Log.d(TAG, "getLocalProfile: Fixing missing UID locally with: $currentUid")
                 val fixedProfile = profile.copy(uid = currentUid)
+                // Save it back to ensure it's there next time
                 preferenceManager.saveProfileLocally(
                     uid = currentUid,
                     type = fixedProfile.type.name,
@@ -166,6 +167,12 @@ class HomeRepositoryImpl @Inject constructor(
             }
         }
         return profile
+    }
+
+    override fun getUserId(): String {
+        return preferenceManager.getUserId().ifBlank {
+            firebaseAuth.currentUser?.uid ?: ""
+        }
     }
 
     override fun isProfileSet(): Boolean = preferenceManager.isProfileSet()

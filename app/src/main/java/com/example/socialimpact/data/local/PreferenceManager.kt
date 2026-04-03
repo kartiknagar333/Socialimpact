@@ -82,6 +82,10 @@ class PreferenceManager @Inject constructor(
         )
     }
 
+    fun getUserId(): String {
+        return sharedPreferences.getString(KEY_USER_ID, "") ?: ""
+    }
+
     fun isProfileSet(): Boolean {
         return sharedPreferences.contains(KEY_USER_TYPE)
     }

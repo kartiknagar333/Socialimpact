@@ -38,6 +38,9 @@ class DonationViewModel @Inject constructor(
     private val _processingItems = MutableStateFlow<Set<String>>(emptySet())
     val processingItems = _processingItems.asStateFlow()
 
+    val currentUserId: String
+        get() = homeRepository.getLocalProfile()?.uid ?: firebaseAuth.currentUser?.uid ?: ""
+
     fun fetchDonations(postId: String) {
         Log.d(TAG, "fetchDonations: Requesting donations for postId: $postId")
         viewModelScope.launch {
@@ -88,11 +91,11 @@ class DonationViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true) }
             
-            // Fix: Use FirebaseAuth as the source of truth for the donor UID
-            val currentUserId = firebaseAuth.currentUser?.uid
+            // source of truth for the donor UID
+            val currentUserId = this@DonationViewModel.currentUserId
             val profile = homeRepository.getLocalProfile()
             
-            if (currentUserId == null || profile == null) {
+            if (currentUserId.isEmpty() || profile == null) {
                 _uiState.update { it.copy(isProcessing = false, error = "Authentication or Profile not found") }
                 return@launch
             }
@@ -127,9 +130,9 @@ class DonationViewModel @Inject constructor(
         Log.d(TAG, "startFundDonation: Starting for postId: $postId, amount: $amountUsd")
         viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true, error = null) }
-            val currentUserId = firebaseAuth.currentUser?.uid
+            val currentUserId = this@DonationViewModel.currentUserId
             
-            if (currentUserId == null) {
+            if (currentUserId.isEmpty()) {
                 Log.e(TAG, "startFundDonation: User not authenticated")
                 _uiState.update { it.copy(isProcessing = false, error = "Please sign in to donate.") }
                 return@launch

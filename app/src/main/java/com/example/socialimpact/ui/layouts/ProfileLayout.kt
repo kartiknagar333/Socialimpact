@@ -105,7 +105,6 @@ fun ProfileLayout(
                 PostDetailLayout(
                     post = post,
                     animatedVisibilityScope = this@AnimatedContent,
-                    isMyPost = post.userId == profile?.uid,
                     donationFactory = donationFactory,
                     onBack = { selectedPost = null }
                 )

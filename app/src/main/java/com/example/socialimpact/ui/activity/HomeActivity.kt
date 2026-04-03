@@ -182,7 +182,6 @@ fun HomeNavigation(
                             PostDetailLayout(
                                 post = post,
                                 animatedVisibilityScope = this@AnimatedContent,
-                                isMyPost = isMyPost,
                                 donationFactory = donationFactory,
                                 onBack = { selectedPost = null }
                             )
