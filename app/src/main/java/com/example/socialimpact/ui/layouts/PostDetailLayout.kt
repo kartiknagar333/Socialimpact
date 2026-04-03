@@ -263,14 +263,13 @@ fun SharedTransitionScope.PostDetailLayout(
                                 color = MaterialTheme.colorScheme.tertiary,
                                 trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
                             )
-                            val pendingCount = item.pending.toIntOrNull() ?: 0
-                            if (pendingCount > 0) {
+                            if (item.pending.isNotEmpty() && item.pending.isNotBlank() && item.pending != "0" && item.pending != "0.0") {
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     modifier = Modifier.align(Alignment.End),
                                     text = "Pending ${item.pending}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onBackground,
+                                    color = Color.White.copy(0.7f),
                                 )
                             }
                         }
