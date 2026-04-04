@@ -1,8 +1,74 @@
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
 const db = admin.firestore();
+
+/**
+ * Triggered when a new donation document is created.
+ * Sends a push notification to the post owner.
+ */
+exports.onDonationCreated = onDocumentCreated("posts/{postId}/donations/{donorId}", async (event) => {
+    const postId = event.params.postId;
+    const donationData = event.data.data();
+
+    try {
+        // 1. Get Post details to find the owner
+        const postDoc = await db.doc(`posts/${postId}`).get();
+        if (!postDoc.exists) {
+            console.log(`Post ${postId} not found.`);
+            return;
+        }
+        const post = postDoc.data();
+        const ownerId = post.userId;
+
+        // 2. Get Owner's FCM token
+        const ownerDoc = await db.doc(`account/${ownerId}`).get();
+        if (!ownerDoc.exists) {
+            console.log(`Owner ${ownerId} not found.`);
+            return;
+        }
+        const fcmToken = ownerDoc.data().fcmToken;
+        if (!fcmToken) {
+            console.log(`Owner ${ownerId} has no FCM token.`);
+            return;
+        }
+
+        // 3. Resolve Donor Name
+        let donorName = "Someone";
+        if (donationData.user_ref) {
+            const donorDoc = await donationData.user_ref.get();
+            if (donorDoc.exists) {
+                donorName = donorDoc.data().fullName || "Someone";
+            }
+        }
+
+        // 4. Construct Notification Message
+        const items = donationData.dynamicNeed || [];
+        const itemNames = items.map(i => `${i.quantity} ${i.name}`).join(", ");
+
+        const message = {
+            notification: {
+                title: "New Donation Received!",
+                body: `${donorName} donated to your post: ${post.title}. Items: ${itemNames}`
+            },
+            data: {
+                postId: postId,
+                type: "DONATION",
+                click_action: "FLUTTER_NOTIFICATION_CLICK" // Common for many setups, but handled by service
+            },
+            token: fcmToken
+        };
+
+        // 5. Send Notification
+        const response = await admin.messaging().send(message);
+        console.log(`Successfully sent message to owner ${ownerId}:`, response);
+
+    } catch (error) {
+        console.error("Error sending donation notification:", error);
+    }
+});
 
 /**
  * Helper to sync Customer data (Senders) to Firestore path: account/{uid}/payment/send

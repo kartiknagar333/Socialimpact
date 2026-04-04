@@ -1,12 +1,16 @@
 package com.example.socialimpact.ui.activity
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -14,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModelProvider
@@ -36,9 +41,10 @@ import com.example.socialimpact.ui.viewmodel.EditProfileViewModel
 import com.example.socialimpact.ui.viewmodel.EditProfileViewModelFactory
 import com.example.socialimpact.ui.viewmodel.HomeViewModel
 import com.example.socialimpact.ui.viewmodel.HomeViewModelFactory
-import com.example.socialimpact.ui.viewmodel.DonationViewModel
 import com.example.socialimpact.ui.viewmodel.DonationViewModelFactory
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -55,6 +61,14 @@ class HomeActivity : ComponentActivity() {
     @Inject
     lateinit var donationViewModelFactory: DonationViewModelFactory
 
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            fetchAndStoreFcmToken()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -63,6 +77,9 @@ class HomeActivity : ComponentActivity() {
             .homeActivityComponent()
             .create()
             .inject(this)
+
+        askNotificationPermission()
+        fetchAndStoreFcmToken()
 
         val isFromSignup = intent.getBooleanExtra("IS_FROM_SIGNUP", false)
 
@@ -95,6 +112,41 @@ class HomeActivity : ComponentActivity() {
                         startActivity(intent)
                     }
                 )
+            }
+        }
+    }
+
+    private fun askNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                // Permission is already granted
+            } else {
+                // Directly ask for the permission
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    private fun fetchAndStoreFcmToken() {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                Log.w("FCM", "Fetching FCM registration token failed", task.exception)
+                return@addOnCompleteListener
+            }
+
+            val token = task.result
+            Log.d("FCM", "Token: $token")
+            
+            val uid = FirebaseAuth.getInstance().currentUser?.uid
+            if (uid != null) {
+                FirebaseFirestore.getInstance()
+                    .collection("account")
+                    .document(uid)
+                    .update("fcmToken", token)
+                    .addOnSuccessListener { Log.d("FCM", "Token stored successfully") }
+                    .addOnFailureListener { e: Exception -> Log.e("FCM", "Failed to store token", e) }
             }
         }
     }
@@ -135,7 +187,6 @@ fun HomeNavigation(
     val coroutineScope = rememberCoroutineScope()
     val authViewModel: AuthViewModel = viewModel(factory = authFactory)
     val homeViewModel: HomeViewModel = viewModel(factory = homeFactory)
-    val currentUserId = remember { FirebaseAuth.getInstance().currentUser?.uid ?: "" }
 
     SharedTransitionLayout {
         NavHost(
@@ -177,7 +228,6 @@ fun HomeNavigation(
                             animatedVisibilityScope = this@AnimatedContent
                         )
                     } else {
-                        val isMyPost = post.userId == currentUserId
                         with(this@SharedTransitionLayout) {
                             PostDetailLayout(
                                 post = post,
