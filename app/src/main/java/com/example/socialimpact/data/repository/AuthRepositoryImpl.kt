@@ -30,9 +30,9 @@ class AuthRepositoryImpl @Inject constructor(
 ) : AuthRepository {
 
     companion object {
+        const val KEY_USER_ID = "user_id"
         private const val KEY_USER_TYPE = "user_type"
         private const val KEY_FULL_NAME = "full_name"
-        private const val KEY_ORG_NAME = "org_name"
         private const val KEY_REG_ID = "reg_id"
         private const val KEY_WEBSITE = "website"
         private const val KEY_INDUSTRY = "industry"
@@ -50,7 +50,7 @@ class AuthRepositoryImpl @Inject constructor(
                     }
                     .addOnFailureListener { exception ->
                         if (exception is FirebaseAuthUserCollisionException) {
-                            continuation.resumeWithException(Exception("This email is already registered. Please sign in instead."))
+                            continuation.resumeWithException(Exception("This email is already registered."))
                         } else {
                             continuation.resumeWithException(exception)
                         }
@@ -71,14 +71,18 @@ class AuthRepositoryImpl @Inject constructor(
                     }
                     .addOnFailureListener { exception ->
                         if (exception is FirebaseAuthInvalidUserException) {
-                            continuation.resumeWithException(Exception("No account found with this email. Please sign up."))
+                            continuation.resumeWithException(Exception("No account found with this email."))
                         } else {
                             continuation.resumeWithException(exception)
                         }
                     }
             }
-            // Sync user data after successful sign in
-            syncUserDataInternal().collect { /* sync outcome logged within internal method */ }
+            // Save UID immediately
+            sharedPreferences.edit { putString(KEY_USER_ID, authResult.user?.uid) }
+            
+            // Sync full data
+            syncUserDataInternal().collect { }
+            
             emit(Result.success(authResult))
         } catch (e: Exception) {
             emit(Result.failure(e))
@@ -91,21 +95,13 @@ class AuthRepositoryImpl @Inject constructor(
                 val credential = GoogleAuthProvider.getCredential(idToken, null)
                 googleAuth.signInWithCredential(credential)
                     .addOnSuccessListener { result ->
-                        val isNewUser = result.additionalUserInfo?.isNewUser == true
-                        
-                        if (isSignup && !isNewUser) {
-                            continuation.resumeWithException(Exception("This Google account is already registered. Please sign in."))
-                        } else if (!isSignup && isNewUser) {
-                            result.user?.delete()
-                            continuation.resumeWithException(Exception("No account found with this Google email. Please sign up."))
-                        } else {
-                            continuation.resume(result)
-                        }
+                        continuation.resume(result)
                     }
                     .addOnFailureListener { exception ->
                         continuation.resumeWithException(exception)
                     }
             }
+            sharedPreferences.edit { putString(KEY_USER_ID, authResult.user?.uid) }
             if (!isSignup) {
                 syncUserDataInternal().collect { }
             }
@@ -117,10 +113,8 @@ class AuthRepositoryImpl @Inject constructor(
 
     override fun logout() {
         sharedPreferences.edit { clear() }
-        when {
-            isGoogleUser() -> googleAuth.signOut()
-            else -> emailAuth.signOut()
-        }
+        emailAuth.signOut()
+        googleAuth.signOut()
     }
 
     override fun syncUserData(): Flow<Result<Unit>> = syncUserDataInternal()
@@ -141,9 +135,9 @@ class AuthRepositoryImpl @Inject constructor(
                 val data = document.data ?: throw Exception("Document is empty")
                 
                 sharedPreferences.edit().apply {
+                    putString(KEY_USER_ID, uid) // Ensure UID is saved
                     putString(KEY_USER_TYPE, data["type"] as? String)
                     putString(KEY_FULL_NAME, data["fullName"] as? String)
-                    putString(KEY_ORG_NAME, data["organizationName"] as? String)
                     putString(KEY_REG_ID, data["registrationId"] as? String)
                     putString(KEY_WEBSITE, data["website"] as? String)
                     putString(KEY_INDUSTRY, data["industry"] as? String)
@@ -154,18 +148,11 @@ class AuthRepositoryImpl @Inject constructor(
                 
                 emit(Result.success(Unit))
             } else {
-                emit(Result.failure(Exception("No profile found on server")))
+                emit(Result.failure(Exception("No profile found")))
             }
         } catch (e: Exception) {
             Log.e("Auth", "Sync failed: ${e.message}")
             emit(Result.failure(e))
         }
     }.flowOn(Dispatchers.IO)
-
-    private fun isGoogleUser(): Boolean {
-        val user = emailAuth.currentUser ?: googleAuth.currentUser
-        return user?.providerData?.any {
-            it.providerId == GoogleAuthProvider.PROVIDER_ID
-        } == true
-    }
 }

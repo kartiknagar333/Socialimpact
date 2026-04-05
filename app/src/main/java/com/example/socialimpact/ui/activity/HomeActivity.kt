@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,6 +31,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.socialimpact.di.component.SocialImpactApp
 import com.example.socialimpact.domain.model.HelpRequestPost
+import com.example.socialimpact.domain.repository.HomeRepository
 import com.example.socialimpact.ui.layouts.EditProfileLayout
 import com.example.socialimpact.ui.layouts.HomeLayout
 import com.example.socialimpact.ui.layouts.PostDetailLayout
@@ -42,8 +44,8 @@ import com.example.socialimpact.ui.viewmodel.EditProfileViewModelFactory
 import com.example.socialimpact.ui.viewmodel.HomeViewModel
 import com.example.socialimpact.ui.viewmodel.HomeViewModelFactory
 import com.example.socialimpact.ui.viewmodel.DonationViewModelFactory
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -61,11 +63,16 @@ class HomeActivity : ComponentActivity() {
     @Inject
     lateinit var donationViewModelFactory: DonationViewModelFactory
 
+    @Inject
+    lateinit var homeRepository: HomeRepository
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
             fetchAndStoreFcmToken()
+        } else {
+            Toast.makeText(this, "Notifications disabled. You won't receive donation alerts.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -121,9 +128,8 @@ class HomeActivity : ComponentActivity() {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
             ) {
-                // Permission is already granted
+                Log.d("FCM", "Notification permission already granted")
             } else {
-                // Directly ask for the permission
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
@@ -137,16 +143,25 @@ class HomeActivity : ComponentActivity() {
             }
 
             val token = task.result
-            Log.d("FCM", "Token: $token")
+            Log.d("FCM", "Token retrieved: $token")
             
-            val uid = FirebaseAuth.getInstance().currentUser?.uid
-            if (uid != null) {
+            // Get UID from PreferenceManager (via Repository)
+            val uid = homeRepository.getUserId()
+            
+            if (uid.isNotBlank()) {
                 FirebaseFirestore.getInstance()
                     .collection("account")
                     .document(uid)
-                    .update("fcmToken", token)
-                    .addOnSuccessListener { Log.d("FCM", "Token stored successfully") }
-                    .addOnFailureListener { e: Exception -> Log.e("FCM", "Failed to store token", e) }
+                    .set(mapOf("fcmToken" to token), SetOptions.merge())
+                    .addOnSuccessListener { 
+                        Log.d("FCM", "Token successfully synced to Firestore for UID: $uid")
+                        Toast.makeText(this, "FCM Token Synced", Toast.LENGTH_SHORT).show()
+                    }
+                    .addOnFailureListener { e -> 
+                        Log.e("FCM", "Failed to sync token to Firestore", e)
+                    }
+            } else {
+                Log.w("FCM", "No user ID found in PreferenceManager, skipping token sync")
             }
         }
     }
