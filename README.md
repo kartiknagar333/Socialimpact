@@ -20,7 +20,175 @@ The app follows **MVVM + Clean Architecture**, uses **Firebase as backend**, and
 👉 **[Open Demo](https://appetize.io/app/b_3vx2off6nurzm3y5dkkg72amqm)**
 
 ---
+## 🚀 Getting Started
 
+Follow these steps to download, configure, and run the Socialimpact app with Firebase.
+
+### 1. Clone the project
+
+First, clone this repository:
+```bash
+git clone https://github.com/kartiknagar333/Socialimpact.git
+cd Socialimpact
+```
+
+### 2. Set up a Firebase project
+
+1. Go to the [Firebase Console](https://console.firebase.google.com/).
+2. Click **Create a project** and enter a project name. Accept the terms and (optionally) enable Google Analytics.
+3. Once the project is created, you'll land on the project overview page.
+
+### 3. Register your Android app
+
+1. On the Firebase Console's project overview page, click the **Android** icon to add a new app.
+2. Enter your Android package name. You can find it in your module's `build.gradle` file (`applicationId`).
+3. (Optional) Add an app nickname for your reference.
+4. Click **Register app**.
+
+### 4. Download `google-services.json`
+
+Firebase generates a configuration file (`google-services.json`) during the registration process. Download this file and move it into the app module's root directory (usually `app/`). Ensure the filename isn't modified (no `(2)` suffix etc.).
+
+### 5. Add the Firebase Gradle plugin
+
+In your **project-level** `build.gradle` (or `build.gradle.kts`) file, add the Google Services plugin:
+```gradle
+plugins {
+    id("com.android.application") version "7.3.0" apply false
+    // Add the Google services Gradle plugin
+    id("com.google.gms.google-services") version "4.4.4" apply false
+}
+```
+
+Then in your **module-level** `build.gradle` (e.g. `app/build.gradle`):
+```gradle
+plugins {
+    id("com.android.application")
+    // Apply the Google services plugin
+    id("com.google.gms.google-services")
+}
+```
+
+This plugin makes the values from `google-services.json` available to the Firebase SDK.
+
+### 6. Add Firebase SDK dependencies
+
+Use the Firebase BoM (Bill of Materials) to manage versions automatically. In your **module-level** `build.gradle`:
+```gradle
+dependencies {
+    // Import the Firebase BoM
+    implementation(platform("com.google.firebase:firebase-bom:34.11.0"))
+
+    // Add the dependencies for the Firebase products you need
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-analytics") // optional
+
+    // Add other Firebase libraries as required
+}
+```
+
+After adding these dependencies, sync your project with Gradle.
+
+### 7. Run the app
+
+Now you can build and run the app from Android Studio or via Gradle:
+```bash
+./gradlew installDebug
+```
+
+The app should launch and connect to your Firebase project.
+
+---
+
+## 🔒 Firestore Security Rules
+
+Use these rules to secure your Firestore database. Place them under `Firestore Database` > `Rules` in the Firebase Console.
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── ACCOUNT ───────────────────────────────────────
+    match /account/{userId} {
+      allow get, create, update: if request.auth != null
+                                 && request.auth.uid == userId;
+
+      match /{allPaths=**} {
+        allow read, write: if request.auth != null
+                           && request.auth.uid == userId;
+      }
+    }
+
+    // ─── PROFILE ───────────────────────────────────────
+    match /profile/{document=**} {
+      allow list: if false;
+    }
+
+    match /profile/person/{id}/{userId} {
+      allow get: if request.auth != null;
+      allow create, update, delete: if request.auth != null
+                                    && request.auth.uid == userId;
+    }
+
+    match /profile/ngo/{id}/{userId} {
+      allow get: if request.auth != null;
+      allow create, update, delete: if request.auth != null
+                                    && request.auth.uid == userId;
+    }
+
+    match /profile/corporation/{id}/{userId} {
+      allow get: if request.auth != null;
+      allow create, update, delete: if request.auth != null
+                                    && request.auth.uid == userId;
+    }
+
+    // ─── POSTS & DONATIONS ─────────────────────────────
+    match /posts/{postId} {
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.userId;
+
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dynamicNeeds']) &&
+          request.resource.data.userId == resource.data.userId
+        )
+      );
+
+      allow delete: if request.auth != null
+                    && request.auth.uid == resource.data.userId;
+
+      match /donations/{userId} {
+        allow read: if request.auth != null;
+
+        allow create: if request.auth != null
+                      && request.auth.uid == userId;
+
+        allow update: if request.auth != null && (
+          request.auth.uid == userId ||
+          request.auth.uid == get(/databases/$(database)/documents/posts/$(postId)).data.userId
+        );
+
+        allow delete: if false;
+      }
+    }
+  }
+}
+```
+
+These rules ensure:
+
+- **Account data** can only be read and written by the authenticated user.
+- **Profiles** are publicly readable but only editable by the owner.
+- **Posts** can be read by any authenticated user; only the owner can create or delete a post.
+- **Donations** can be created by donors and updated by either the donor or the post owner.
+
+---
+
+💡 **Tip:** Always test your security rules using the Firebase Emulator Suite before deploying to production.
 
 ## 🏗️ Architecture
 
