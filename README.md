@@ -21,16 +21,6 @@ The app follows **MVVM + Clean Architecture**, uses **Firebase as backend**, and
 
 ---
 
-### 📱 Embedded Preview (works in some platforms like docs/blogs, NOT GitHub)
-
-<iframe 
-    src="https://appetize.io/embed/b_3vx2off6nurzm3y5dkkg72amqm" 
-    width="100%" 
-    height="600px" 
-    frameborder="0" 
-    scrolling="no">
-</iframe>
-
 
 ## 🏗️ Architecture
 
